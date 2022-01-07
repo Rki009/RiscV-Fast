@@ -4,9 +4,10 @@
 
 - Very fast simulation of RiscV 32 architecture
 	* RiscV ISA is converted in to VERY FAST VLIW (Very Long Instruction Word)
-	* VLIW VERY FAST Execution engine
+	* VLIW VERY FAST Execution Engine
 	* Support for memory bounds/access, instruction logging, breakpoint debugging
 	* Time interrupt, approximately 100Hz (programmable)
+	* External interrupt from user defined source
 	* mcycle CSR reports real cycles, 1 instruction per cycle, full 64 bits
 	* time CSR reports real host time, in microseconds, full 64 bits
 	* 32 bit random variable CSR support, CSR = 0x015
@@ -40,53 +41,68 @@ The goal is a FAST simulator. It certainly achieves its goal as a real-time simu
 
 ## Supported Instructions
 
-```
-lui rd,imm20
-auipc rd,imm20
-j joff
-jal rd,joff
-jr rs1
-jalr rd,rs1,simm12
-beq rs1,rs2,boff
-bne rs1,rs2,boff
-blt rs1,rs2,boff
-bge rs1,rs2,boff
-bltu rs1,rs2,boff
-bgeu rs1,rs2,boff
-lb rd,rs,simm12
-lh rd,rs,simm12
-lw rd,rs,simm12
-lbu rd,rs,simm12
-lhu rd,rs,simm12
-sb rs2,rs1,s2imm12
-sh rs2,rs1,s2imm12
-sw rs2,rs1,s2imm12
-nop
-addi rd,rs,simm12
-slti rd,rs,simm12
-sltiu rd,rs,simm12
-xori rd,rs,simm12
-ori rd,rs,simm12
-andi rd,rs,simm12
-slli rd,rs1,shamt
-srli rd,rs1,shamt
-srai rd,rs1,shamt
-add rd,rs1,rs2
-sub rd,rs1,rs2
-sll rd,rs1,rs2
-slt rd,rs1,rs2
-sltu rd,rs1,rs2
-xor rd,rs1,rs2
-srl rd,rs1,rs2
-sra rd,rs1,rs2
-or rd,rs1,rs2
-and rd,rs1,rs2
-ecall
-ebreak
-sret
-mret
-wfi
-```
+    Load Upper:
+    	lui rd,imm20
+        auipc rd,imm20
+    Jump:
+        j joff
+        jal rd,joff
+        jr rs1
+        jalr rd,rs1,simm12
+    Branch:
+    	beq rs1,rs2,boff
+        bne rs1,rs2,boff
+        blt rs1,rs2,boff
+        bge rs1,rs2,boff
+        bltu rs1,rs2,boff
+        bgeu rs1,rs2,boff
+    Load:
+    	lb rd,rs,simm12
+        lh rd,rs,simm12
+        lw rd,rs,simm12
+        lbu rd,rs,simm12
+        lhu rd,rs,simm12
+    Store:
+    	sb rs2,rs1,s2imm12
+        sh rs2,rs1,s2imm12
+        sw rs2,rs1,s2imm12
+    Alu: 
+    	nop
+        addi rd,rs,simm12
+        slti rd,rs,simm12
+        sltiu rd,rs,simm12
+        xori rd,rs,simm12
+        ori rd,rs,simm12
+        andi rd,rs,simm12
+        slli rd,rs1,shamt
+        srli rd,rs1,shamt
+        srai rd,rs1,shamt
+        add rd,rs1,rs2
+        sub rd,rs1,rs2
+        sll rd,rs1,rs2
+        slt rd,rs1,rs2
+        sltu rd,rs1,rs2
+        xor rd,rs1,rs2
+        srl rd,rs1,rs2
+        sra rd,rs1,rs2
+        or rd,rs1,rs2
+        and rd,rs1,rs2
+    System:
+    	ecall
+        ebreak
+        sret
+        mret
+        wfi
+    CSR:
+    	csrrw csr,rd,rs
+        csrrs csr,rd,rs
+        csrrc csr,rd,rs
+        csrrwi csr,rd,uimm5
+        csrrsi csr,rd,uimm5
+        csrrci csr,rd,uimm5
+
+## Build
+A makefile is included. RiscVFAST has been built and tested using Ubuntu (linux) under Windows (wsl) and on a Raspberry Pi 4. 
 
 ## Future
 Some future work ...
@@ -108,7 +124,7 @@ https://github.com/riscv/riscv-isa-manual/releases/download/Priv-v1.12/riscv-pri
 
 ## License
 
-Copyright (c) 2021 Ron K. Irvine
+Copyright (c) 2022 Ron K. Irvine
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

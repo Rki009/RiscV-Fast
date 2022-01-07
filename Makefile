@@ -49,7 +49,7 @@ $(PROJ): $(OBJ) $(HDR) Makefile
 	
 run: all
 ifeq ($(UNAME_P),x86_64)
-	cd sw/Test_001 && make all && cd ..
+	cd ./sw/Test_001 && make all && cd ..
 endif
 	./$(PROJ) --newlib ./sw/Test_001/Test32.elf
 

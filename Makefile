@@ -27,7 +27,7 @@ CC = g++
 
 # SRC = LogIt.cpp Functions.cpp mystrftime.cpp Epoch.cpp Erlang.cpp
 # SRC = $(wildcard *.cpp)
-SRC = $(PROJ).cpp Elf64.cpp Cpu.cpp Decode.cpp Compressed.cpp Util.cpp # getopt.c
+SRC = $(PROJ).cpp Elf64.cpp Cpu.cpp Decode.cpp Compressed.cpp Util.cpp Newlib.cpp # getopt.c
 OBJ = $(SRC:%.cpp=%.o)
 HDR = $(wildcard *.h)
 

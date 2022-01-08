@@ -177,6 +177,7 @@ public:
 	int32_t sys_close(uint32_t fd);
 	int sys_read(uint32_t a0, uint32_t a1, uint32_t a2);
 	int sys_write(uint32_t a0, uint32_t a1, uint32_t a2);
+	int sys_lseek(int file, int offset, int whence);
 
 
 

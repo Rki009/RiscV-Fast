@@ -90,7 +90,6 @@ The goal is a FAST simulator. It certainly achieves its goal as a real-time simu
     System
         ecall
         ebreak
-        sret
         mret
         wfi
     CSR
@@ -178,8 +177,8 @@ https://github.com/riscv/riscv-isa-manual/releases/download/Priv-v1.12/riscv-pri
     
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction for private use, including without limitation
-    the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    in the Software without restriction for personal use only, including without
+    limitation the rights to use, copy, modify, merge, publish and distribute
     copies of the Software, and to permit persons to whom the Software is
     furnished to do so, subject to the following conditions:
     

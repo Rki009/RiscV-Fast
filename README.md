@@ -41,32 +41,32 @@ The goal is a FAST simulator. It certainly achieves its goal as a real-time simu
 
 ## Supported Instructions
 
-    Load Upper:
+    Load Upper
     	lui rd,imm20
         auipc rd,imm20
-    Jump:
+    Jump
         j joff
         jal rd,joff
         jr rs1
         jalr rd,rs1,simm12
-    Branch:
+    Branch
     	beq rs1,rs2,boff
         bne rs1,rs2,boff
         blt rs1,rs2,boff
         bge rs1,rs2,boff
         bltu rs1,rs2,boff
         bgeu rs1,rs2,boff
-    Load:
+    Load
     	lb rd,rs,simm12
         lh rd,rs,simm12
         lw rd,rs,simm12
         lbu rd,rs,simm12
         lhu rd,rs,simm12
-    Store:
+    Store
     	sb rs2,rs1,s2imm12
         sh rs2,rs1,s2imm12
         sw rs2,rs1,s2imm12
-    Alu: 
+    Alu
     	nop
         addi rd,rs,simm12
         slti rd,rs,simm12
@@ -87,13 +87,13 @@ The goal is a FAST simulator. It certainly achieves its goal as a real-time simu
         sra rd,rs1,rs2
         or rd,rs1,rs2
         and rd,rs1,rs2
-    System:
+    System
     	ecall
         ebreak
         sret
         mret
         wfi
-    CSR:
+    CSR
     	csrrw csr,rd,rs
         csrrs csr,rd,rs
         csrrc csr,rd,rs

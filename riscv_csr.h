@@ -93,8 +93,10 @@
 #define RISCV_CSR_MINSTRETH	0xb82		// minstreth	Upper 32 bits of minstret, RV32I only
 #define RISCV_CSR_CYCLE		0xc00		// cycle		Cycle counter for RDCYCLE instruction
 #define RISCV_CSR_TIME		0xc01		// time			Timer for RDTIME instruction
+#define RISCV_CSR_INSTRET	0xc02		// instret		Number of Instructions Retired Counter
 #define RISCV_CSR_CYCLEH	0xc80		// cycleh		Upper 32 bits of cycle, RV32I only
 #define RISCV_CSR_TIMEH		0xc81		// timeh		Upper 32 bits of time, RV32I only
+#define RISCV_CSR_INSTRETH	0xc82		// instreth		Upper 32 bits of minstret, RV32I only
 
 // Machine Info
 #define RISCV_CSR_MVENDORID	0xf11		// mvendorid	Machine Vendor ID
@@ -103,7 +105,7 @@
 #define RISCV_CSR_MHARTID	0xf14		// mhartid		Machine Hardware Thread ID
 
 // Custom
-#define RISCV_CSR_RAND		0x015		// rand32		32 bit random value
+#define RISCV_CSR_RAND		0xCC0		// rand32		32 bit random value
 
 #define RISCV_MCAUSE_EBREAK	0x00000000	// EBREAK - Break Exception
 

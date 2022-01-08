@@ -10,7 +10,7 @@
 	* External interrupt from user defined source
 	* mcycle CSR reports real cycles, 1 instruction per cycle, full 64 bits
 	* time CSR reports real host time, in microseconds, full 64 bits
-	* 32 bit random variable CSR support, CSR = 0x015
+	* 32 bit random variable CSR support, CSR = 0xCC0
 	* Simulation of 100MHz clocked Risc-V embedded systems in real-time!
 	* 100+ million instructions per second on a modest x86 host 
 	* 500+ DMIPS (900K Dhrystone/sec)
@@ -100,9 +100,59 @@ The goal is a FAST simulator. It certainly achieves its goal as a real-time simu
         csrrwi csr,rd,uimm5
         csrrsi csr,rd,uimm5
         csrrci csr,rd,uimm5
+		
+## CSR Support
+    Number Privilege Name Description
+    
+    User Counter/Timers
+        0xC00 URO cycle		Cycle counter for RDCYCLE instruction
+        0xC01 URO time		Timer for RDTIME instruction
+        0xC02 URO instret	Instructions-retired counter for RDINSTRET instruction
+        0xC80 URO cycleh	Upper 32 bits of cycle, RV32 only
+        0xC81 URO timeh		Upper 32 bits of time, RV32 only
+        0xC82 URO instreth	Upper 32 bits of instret, RV32 only
+    
+    Machine Information Registers
+        0xF11 MRO mvendorid	Vendor ID
+        0xF12 MRO marchid	Architecture ID
+        0xF13 MRO mimpid	Implementation ID
+        0xF14 MRO mhartid	Hardware thread ID
+    
+    Machine Trap Setup
+        0x300 MRW mstatus	Machine status register
+        0x301 MRW misa		ISA and extensions
+        0x304 MRW mie		Machine interrupt-enable register
+        0x305 MRW mtvec		Machine trap-handler base address
+    
+    Machine Trap Handling
+        0x340 MRW mscratch	Scratch register for machine trap handlers
+        0x341 MRW mepc		Machine exception program counter
+        0x342 MRW mcause	Machine trap cause
+        0x343 MRW mtval		Machine bad address or instruction
+        0x344 MRW mip		Machine interrupt pending
+    
+    Machine Counter/Timers
+        0xB00 MRW mcycle	Machine cycle counter
+        0xB02 MRW minstret	Machine instructions-retired counter
+        0xB80 MRW mcycleh	Upper 32 bits of mcycle, RV32 only
+        0xB82 MRW minstreth	Upper 32 bits of minstret, RV32 only
+		
+	Custom
+        0xCC0 MRO rand32 	Random number, 32 bits
+
+### time/timeh CSR Registers
+The time/timeh register pair is a 64 bit microsecond time. The time is obtained directly from the host machine and represents actual host time. Since the RiscVFAST simulator is fast enough to provide real-time performance the time/timeh pair can be used to obtain very accurate time for the RiscV code.
+
+### cycle/instret/mcycle/minstret CSR Registers
+These registers interface to the simulators basic cycle counter. The cycle counter simply increments for each instruction executed.
+writing to mcycleh will overwrite the top 32 bits of the cycle counter and sets the lower half to zero. Writing to mcycle will set the lower half to a the new value. 
+
+### rand32 CSR Register
+A custom register rand32 has been added. It provides an interface to a equivalent hardware random number generator. On a x86 architecture host it interfaces to the x86 rdrand instruction.
 
 ## Build
-A makefile is included. RiscVFAST has been built and tested using Ubuntu (linux) under Windows (wsl) and on a Raspberry Pi 4. 
+A makefile is included. RiscVFAST has been built and tested using Ubuntu (linux) under Windows (wsl) and on a Raspberry Pi 4.
+"make demo" will build RiscVFAST and run demo32.elf. The RV32I program demo32 tests basic ISA instructions, floating point emulation, access to CSRs, ebreak exception, time interrupt and newlib access. I addition it runs Drytsone for performance demonstration.
 
 ## Future
 Some future work ...

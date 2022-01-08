@@ -47,6 +47,10 @@ all: $(PROJ)
 $(PROJ): $(OBJ) $(HDR) Makefile
 	$(CC) $(LDLAGS) $(OBJ) -o $@
 	
+demo: clean all
+	./$(PROJ) --newlib ./Demo32.elf
+
+	
 run: all
 ifeq ($(UNAME_P),x86_64)
 	-cd ./sw/Test_001 && make all && cd ..

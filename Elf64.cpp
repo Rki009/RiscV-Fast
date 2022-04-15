@@ -17,7 +17,7 @@
 #define ntohl(A) (littleEndian?(A):(((A)>>24)|(((A)&0x00ff0000)>>8)|(((A)&0xff00)<<8)|((A)<<24)))
 #define ntohs(A) (littleEndian?(A):((((A)&0xff00)>>8)|((A)<<8)))
 int littleEndian = 1;
-bool addGpInfo = false;		// add Gp and stack info to the program
+bool addGpInfo = false;		// add 'gp' and stack info to the program
 
 
 #if 0
@@ -379,8 +379,7 @@ void byteSwap(unsigned char* buf, unsigned size) {
 	}
 };
 
-int readElf(const char* inputFilename, Segment* code, Segment* data,
-	uint32_t* entry, uint32_t* edata) {
+int readElf(const char* inputFilename, Segment* code, Segment* data, uint32_t* entry) {
 	// FILE* infile, *outfile, *txtfile;
 	FILE* infile;
 	unsigned char* elfbuf;
@@ -783,35 +782,69 @@ int readElf(const char* inputFilename, Segment* code, Segment* data,
 		// bool inst = (flags&SHF_EXECINSTR);
 		bool rw = (flags&SHF_WRITE);
 
+		// .text - Instrustion and Read Only data
 		if(textOk && (alloc /* && !rw*/)) {
 			if(!quiet) {
 				printf(".text => %-12.12s 0x%08x 0x%08x  [%02x, %02x]\n", name, addr, len, type, flags);
 			}
 			memcpy(code->data+(addr-code->memBase), offset, len);
+			Elf32_Info* ip = new Elf32_Info;
+			ip->name = strdup(name);	// name of the section
+			ip->type = type;			// member category
+			ip->flags = flags;			// attribute  flags
+			ip->addr = addr;			// physical address in bytes
+			ip->size = len;				// section size in bytes
+			ip->offset = elfSection->sh_offset;	// file offset in bytes
+			// append to the memory section
+			for(Elf32_Info** ipp=&(code->elf32); ; ipp = &((*ipp)->next)) {
+				if((*ipp) == NULL) {
+					ip->next = NULL;
+					(*ipp) = ip;
+					break;
+				}
+			}
+
 		}
+		// .data - Data Section
 		else if(dataOk && (alloc && rw)) {
 			if(!quiet) {
 				printf(".data => %-12.12s 0x%08x 0x%08x  [%02x, %02x]\n", name, addr, len, type, flags);
 			}
 			memcpy(data->data+(addr-data->memBase), offset, len);
-			if(edata != NULL) {
-				if(*edata < addr + len) {
-					// *edata = ((addr + len)+0xff) & (int)0xffffff00;
-					*edata = ((addr + len)+0x0f) & (int)0xfffffff0;
-					// printf("edata = %08x\n", *edata);
+			Elf32_Info* ip = new Elf32_Info;
+			ip->name = strdup(name);	// name of the section
+			ip->type = type;			// member category
+			ip->flags = flags;			// attribute  flags
+			ip->addr = addr;			// physical address in bytes
+			ip->size = len;			// section size in bytes
+			ip->offset = elfSection->sh_offset;	// file offset in bytes
+			// append to the memory section
+			for(Elf32_Info** ipp=&(data->elf32); ; ipp = &((*ipp)->next)) {
+				if((*ipp) == NULL) {
+					ip->next = NULL;
+					(*ipp) = ip;
+					break;
 				}
 			}
 		}
+		// .bss - bss Section
 		else if(dataOk && (!alloc && rw)) {
 			if(!quiet) {
 				printf(".bss  => %-12.12s 0x%08x 0x%08x  [%02x, %02x]\n", name, addr, len, type, flags);
 			}
 			memset(data->data+(addr-data->memBase), 0, len);
-			if(edata != NULL) {
-				if(*edata < addr + len) {
-					// *edata = ((addr + len)+0xff) & (int)0xffffff00;
-					*edata = ((addr + len)+0x0f) & (int)0xfffffff0;
-					// printf("edata = %08x\n", *edata);
+			Elf32_Info* ip = new Elf32_Info;
+			ip->type = type;			// member category
+			ip->flags = flags;			// attribute  flags
+			ip->addr = addr;			// physical address in bytes
+			ip->size = len;			// section size in bytes
+			ip->offset = elfSection->sh_offset;	// file offset in bytes
+			// append to the memory section
+			for(Elf32_Info** ipp=&(data->elf32); ; ipp = &((*ipp)->next)) {
+				if((*ipp) == NULL) {
+					ip->next = NULL;
+					(*ipp) = ip;
+					break;
 				}
 			}
 		}

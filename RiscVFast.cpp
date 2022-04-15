@@ -49,8 +49,9 @@ uint32_t	hostSize = HOST_SIZE;	// 64K
 void uartWrite(uint32_t value) {
 	uint8_t c = value;
 	// printf("Uart: '%c' (0x%02x)\n", isprint(c)?c:'.', c);
-#if 0
+#if 1
 	printf("%c", c);
+	// fprintf(stdout, "%c", c);
 	fflush(stdout);
 #else
 	fprintf(stderr, "%c", c);
@@ -136,21 +137,284 @@ uint32_t getValue(const char* argv) {
 	return strtol(s, NULL, 16);
 }
 
+void getAddrSize(const char* str, uint32_t* addr, uint32_t* size) {
+	const char* s = str;
+	if(*s == '=') {
+		++s;
+	}
+	char* pEnd;
+	*addr = strtol(s, &pEnd, 16);
+	s = pEnd;
+	if(*s == ':') {
+		*size = strtol(++s, &pEnd, 16);
+	}
+}
+
+const char* reg_list[32] {
+	"zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
+	"s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
+	"a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7",
+	"s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
+};
+
+
+void dump_reg(char* reg) {
+	if(reg != NULL && strcmp(reg, "all")!=0) {
+		int n;
+		if(reg[0] == 'x') {
+			n = atoi(&reg[1]);
+			printf("%s: %08x\n", reg, cpu->reg[n]);
+			return;
+		}
+		for(n = 0; n<32; ++n) {
+			if(strcmp(reg, reg_list[n])==0) {
+				printf("%s: %08x\n", reg, cpu->reg[n]);
+				return;
+			}
+		}
+		printf("Unknown reg: %s\n", reg);
+		return;
+	}
+
+	for(int i=0; i<32; ++i) {
+		printf("%4s: 0x%08x", reg_list[i], cpu->reg[i]);
+		if((i%4) == 3) {
+			printf("\n");
+		}
+	}
+}
+
+
+
+//	Interactive Debug Mode
+//	======================
+//		Interactive commands:
+//		core [num]						# Set current core to [num], display current core if [num] is omitted
+//		reg [reg]                		# Display [reg] (all if omitted)
+//		freg <reg>               		# Display float <reg> as hex
+//		fregh <reg>              		# Display half precision <reg>
+//		fregs <reg>              		# Display single precision <reg>
+//		fregd <reg>              		# Display double precision <reg>
+//		vreg [reg]               		# Display vector [reg] (all if omitted) in <core>
+//		pc [addr]						# Set current pc to [addr], display current pc if [addr] is omitted
+//		mem <hex addr>                  # Show contents of physical memory
+//		dump <hex addr>					# Dump 256 bytes of physical memory
+//		str <hex addr>           		# Show NUL-terminated C string at <hex addr>
+//		until reg <reg> <val>    		# Stop when <reg> equals <val>
+//		until pc <val>           		# Stop when PC hits <val>
+//		untiln pc <val>          		# Run noisy and stop when PC hits <val>
+//		until mem <addr> <val>          # Stop when memory <addr> becomes <val>
+//		while reg <reg> <val>    		# Run while <reg> is <val>
+//		while pc <val>           		# Run while PC is <val>
+//		while mem <addr> <val>          # Run while memory <addr> is <val>
+//		run [count]                     # Resume noisy execution (until Ctrl+C, or [count] insns)
+//		r [count]                       # Alias for run
+//		rs [count]                      # Resume silent execution (until Ctrl+C, or [count] insns)
+//		quit                            # End the simulation
+//		q                               # Alias for quit
+//		help                            # This screen!
+//		h                               # Alias for help
+//		Keys:							#
+//			Enter						# run 1
+//			Ctrl+C						# stop execution
+//
+
+void debug_help(void) {
+	printf("Interactive Debug Mode\n");
+	printf("======================\n");
+	printf("core [num]					Set the current core to [num], print the current core number\n");
+	printf("quit or q					End the simulation\n");
+	printf("pc [addr]					Set the program counter, print the current pc\n");
+	printf("mem addr [value]			Set memory address to [value], print the memory contents\n");
+	printf("reg [name]					Show register [name], or show all\n");
+	printf("run [num]					Run for [num] cycles, or forever is no [num]\n");
+	printf("r [num]						Same as run\n");
+	printf("step or s					Step, execute next instruction\n");
+	printf("<Enter>						Enter key, same as step\n");
+	printf("help or h					Show help\n");
+	printf("  [option]					Option in above commands, if absent command just prints\n");
+}
+
+
+void show_current(void) {
+	char buf[256];
+	uint32_t pc = cpu->pc;
+	uint32_t insn = memory->read32(pc);
+	disasm(pc, insn, buf);
+	printf("0x%08x: 0x%08x  %s\n", pc, insn, buf);
+}
+
+int debug_mode(void) {
+	int core_id = 0;	// default to core 0
+
+	char* args[16];	// allow up to 16 command parts
+	int nargs = 0;
+	show_current();
+	for(;;) {
+		char buf[256];
+
+		printf(": "); fflush(stdout);
+		fgets(buf, sizeof(buf)-1, stdin);
+		// zap trailing '\n'
+		for(char* s=buf; *s; ++s) {
+			if(*s == '\n') {
+				*s = '\0';
+				break;
+			}
+		}
+
+		// parse the args
+		char* s = buf;
+		for(nargs = 0; nargs<16; ++nargs) {
+			while(isspace(*s)) {
+				++s;
+			}
+			if(*s == '\n' || *s == '\0') {
+				*s = '\0';
+				break;
+			}
+			args[nargs] = s;
+			while(!isspace(*s) && *s != '\0') {
+				++s;
+			}
+			if(*s != '\0') {
+				*s++ = '\0';
+			}
+		}
+		// for(int i=0; i<nargs; ++i) printf("[%d] %s\n", i, args[i]);
+		if(nargs == 0) {
+			cpu->run(1);
+			show_current();
+		}
+		else if(strcmp(args[0], "q")==0 || strcmp(args[0], "quit")==0) {
+			return true;
+		}
+		else if(strcmp(buf, "h")==0 || strcmp(buf, "help")==0) {
+			debug_help();
+		}
+		else if(strcmp(args[0], "core")==0) {
+			if(nargs == 2) {
+				core_id = strtol(args[1], NULL, 0);
+			}
+			printf("Core: %d\n", core_id);
+		}
+		else if(strcmp(buf, "r")==0 || strcmp(buf, "run")==0) {
+			int n = -1;
+			if(nargs == 2) {
+				n = strtol(args[1], NULL, 0);
+			}
+			printf("Run: %d\n", n);
+			cpu->run(n);
+			show_current();
+		}
+		else if(strcmp(buf, "s")==0 || strcmp(buf, "step")==0) {
+			cpu->run(1);
+			show_current();
+		}
+		else if(strcmp(buf, "pc")==0) {
+			if(nargs == 2) {
+				cpu->pc = strtol(args[1], NULL, 0);
+			}
+			printf("PC: %08x\n", cpu->pc);
+		}
+		else if(strcmp(args[0], "mem")==0) {
+			int32_t addr = 0;
+			if(nargs < 2) {
+				printf("No address given!\n");
+			}
+			addr = strtol(args[1], NULL, 0);
+			if(nargs == 3) {
+				uint32_t value = addr = strtol(args[2], NULL, 0);
+				memory->write32(addr, value);
+			}
+			printf("0x%08x: 0x%08x\n", addr, memory->read32(addr));
+		}
+		else if(strcmp(buf, "reg")==0) {
+			if(nargs == 2) {
+				dump_reg(args[1]);
+			}
+			else {
+				dump_reg(NULL);
+			}
+		}
+		else {
+			printf("Unknown command '%s'\n", args[0]);
+		}
+
+#if 0
+		else if(strcmp(buf, "s\n")==0 || strcmp(buf, "\n")==0) {
+			singleStep = true;
+		}
+		else if(strcmp(buf, "r\n")==0 || strcmp(buf, "run\n")==0) {
+			singleStep = false;
+		}
+		else if(strcmp(buf, "v\n")==0 || strcmp(buf, "+\n")==0 || strcmp(buf, "verbose\n")==0) {
+			++verbose;
+			printf("Verbose = %d\n", verbose);
+			cpu->dump32();
+			goto again;
+		}
+		else if(strcmp(buf, "-\n")==0) {
+			verbose = 0;
+			printf("Verbose = %d\n", verbose);
+			goto again;
+		}
+#endif
+
+
+	}
+}
+
+const char* rn2[32] {
+	"x0", "ra", "sp", "gp",
+	"tp", "t0", "t1", "t2",
+	"s0", "s1", "a0", "a1",
+	"a2", "a3", "a4", "a5",
+
+	"a6", "a7", "s2", "s3",
+	"s4", "s5", "s6", "s7",
+	"s8", "s9", "sa", "sb",	//sa = s10, sb = s11
+	"t3", "t4", "t5", "t6"
+};
+void disasm_all(uint32_t start, uint32_t len) {
+	const char* outfile = "disasm_out.txt";
+	FILE* ofp = fopen(outfile, "w");
+	printf("Disasm => %s\n", outfile);
+	char buf[256];
+	for(uint32_t i=start; i < (start+len); i += 4) {
+		uint32_t insn = memory->read32(i);
+		disasm(i, insn, buf);
+#if 0
+		fprintf(ofp, "%08x: %08x %s\n", i, insn, buf);
+#else
+		Vliw vliw;
+		decode2vliw(i, insn, &vliw);
+		fprintf(ofp, "%08x: %08x [%2d %s,%s,%s,%08x] %s\n", i, insn,
+			vliw.opcode, rn2[vliw.rd], rn2[vliw.rs1], rn2[vliw.rs2], vliw.imm, buf);
+#endif
+	}
+	fclose(ofp);
+}
+
 
 void usage(void) {
-	printf("	-t addr		- .text base addresss\n");
-	printf("	-d addr		- .data base addresss\n");
-	printf("	-h addr		- host base addresss\n");
-	printf("	-v			- verbose\n");
-	printf("	-q			- quiet\n");
-	printf("	-u			- unified memory, .text/.data same address space\n");
+	printf("	-T addr:size    - .text base addresss\n");
+	printf("	-D addr:size    - .data base addresss\n");
+	printf("	-H addr:size	- host base addresss\n");
+	printf("	-v			    - verbose\n");
+	printf("	-q			    - quiet\n");
+	printf("    -c              - compile to Warp output\n");
+	printf("	-i			    - interactive debug mode\n");
+	printf("	-u			    - unified memory, .text/.data same address space\n");
 };
 
 
 int main(int argc, char** argv) {
-	bool vflag = 0;			// verbose
-	bool lflag = 0;			// logfile
-	bool uflag = 0;			// unified memory
+	bool vflag = false;			// verbose
+	bool c_flag = true;		// c - compile to Warp output
+	bool lflag = false;			// logfile
+	bool uflag = false;			// unified memory
+	bool debug_flag = false;	// interactive debugging
 	// int bflag = 0;
 	// char* breakStr = NULL;
 	char* textBase = NULL;
@@ -186,7 +450,7 @@ int main(int argc, char** argv) {
 	}
 
 	opterr = 0;
-	while((c = getopt(argc, argv, "lvqub:t:d:h:")) != -1) {
+	while((c = getopt(argc, argv, "cilvqub:T:D:H:")) != -1) {
 		// printf("c = '%c'\n", c);
 
 		switch(c) {
@@ -199,6 +463,16 @@ int main(int argc, char** argv) {
 		case 'q':
 			quiet = true;
 			vflag = 0;
+			break;
+
+		// c - compile to Warp output
+		case 'c':
+			c_flag = true;
+			break;
+
+		// interactive debug flag
+		case 'i':
+			debug_flag = !debug_flag;
 			break;
 
 		case 'v':
@@ -216,16 +490,16 @@ int main(int argc, char** argv) {
 		//	breakStr = optarg;
 		//	break;
 
-		// -t addr, .text base address
-		case 't':
+		// -T addr, .text base address
+		case 'T':
 			textBase = optarg;
 			break;
-		// -d addr, .data base address
-		case 'd':
+		// -D addr, .data base address
+		case 'D':
 			dataBase = optarg;
 			break;
-		// -h addr, host base address
-		case 'h':
+		// -H addr, host base address
+		case 'H':
 			hostBase = optarg;
 			break;
 
@@ -269,12 +543,28 @@ int main(int argc, char** argv) {
 	}
 
 	if(textBase != NULL) {
-		// printf("Textbase = %s - 0x%08x\n", textBase, getValue(textBase));
-		memory->insnMem->memBase = getValue(textBase);
+		uint32_t text_addr = 0;
+		uint32_t text_size = 0;
+		getAddrSize(textBase, &text_addr, &text_size);
+
+		memory->insnMem->memBase = text_addr;
+		if(text_size != 0) {
+			memory->insnMem->memLen = text_size;
+			memory->insnMem->memMask = (text_size-1);
+		}
+		printf("Textbase = '%s' => 0x%08x:0x%08x\n", textBase, text_addr, text_size);
 	}
 	if(dataBase != NULL) {
-		// printf("Database = %s - 0x%08x\n", dataBase, getValue(dataBase));
-		memory->dataMem->memBase = getValue(textBase);
+		uint32_t data_addr = 0;
+		uint32_t data_size = 0;
+		getAddrSize(dataBase, &data_addr, &data_size);
+
+		memory->dataMem->memBase = data_addr;
+		if(data_size != 0) {
+			memory->dataMem->memLen = data_size;
+			memory->dataMem->memMask = (data_size-1);
+		}
+		printf("Database = '%s' => 0x%08x:0x%08x\n", dataBase, data_addr, data_size);
 	}
 	if(hostBase != NULL) {
 		printf("Host Address = %s - 0x%08x\n", hostBase, getValue(hostBase));
@@ -303,32 +593,70 @@ int main(int argc, char** argv) {
 		printf("Logfile: %s\n", logfile);
 	}
 
-	// unsigned long long entry;
-	// unsigned long long edata;
-	uint32_t entry;
-	uint32_t edata;
 
-	readElf(elfFile, memory->insnMem, memory->dataMem, &entry, &edata);
+	//-----------------------------------------------------------------
+	//		Read and Process EFL File
+	//-----------------------------------------------------------------
+	uint32_t entry = 0;
+	readElf(elfFile, memory->insnMem, memory->dataMem, &entry);
+
+	printf(".text:\n");
+	for(Elf32_Info* ip=memory->insnMem->elf32; ip != NULL; ip = ip->next) {
+		printf("  %-12.12s 0x%08x  0x%08x\n", ip->name, ip->addr, ip->size);
+	}
+	printf(".data:\n");
+	for(Elf32_Info* ip=memory->dataMem->elf32; ip != NULL; ip = ip->next) {
+		printf("  %-12.12s 0x%08x  0x%08x\n", ip->name, ip->addr, ip->size);
+	}
+
+	// get Length of the .text section
+	uint32_t text_start = 0;
+	uint32_t text_end = 0;
+	for(Elf32_Info* ip=memory->insnMem->elf32; ip != NULL; ip = ip->next) {
+		if(strcmp(ip->name, ".text")==0) {
+			text_start = ip->addr;
+			text_end = ip->addr + ip->size;
+			break;
+		}
+	}
+	printf(".text: start = 0x%08x, end = 0x%08x\n", text_start, text_end);
+
+
+	// get total Length of the .data section
+	uint32_t data_start = -1;
+	uint32_t data_end = 0;
+	for(Elf32_Info* ip=memory->dataMem->elf32; ip != NULL; ip = ip->next) {
+		uint32_t len = ip->addr + ip->size;
+		if(len < data_start) {
+			data_start = len;
+		}
+		if(len > data_end) {
+			data_end = len;
+		}
+	}
+	printf(".data: start = 0x%08x, end = 0x%08x\n", data_start, data_end);
+
+
+#if 1
+	disasm_all(text_start, text_end);
+#endif
+
+	if(c_flag) {
+		// compile to Warp output
+		rv_compile("rv_warp_out.cpp", 0x00000000, text_end);
+	}
 
 	if(!quiet) {
-		printf("Ready to run: %s @ %08x, %08x\n", elfFile, entry, edata);
+		printf("Ready to run: %s @ %08x, %08x\n", elfFile, entry, data_end);
 	}
 
 	cpu->reset();
 	cpu->start(entry);
-	cpu->edata(edata);
+	cpu->edata(data_end);
 
 	// set the stack to the top of data memory
 	cpu->setStack(memory->dataMem->memBase + memory->dataMem->memLen-16);
 
-	// cpu->breakpoint = 0x00000058; // after memset
-	// cpu->breakpoint = 0x00000000; // main()
-	// cpu->breakpoint = 0x000003d24; // <__libc_fini_array>
-
-	// cpu->breakpoint = 0x000000f4; // Proc2() -- end of Dhry loop
-	// cpu->breakpoint = 0x00000160; // Proc5() -- begin of Dhry loop
-	// cpu->breakpoint = 0x00000418; 	// Proc0() -- begin of Dhry
-	// cpu->breakpoint = 0x0000057a; 	// Memset
 
 	if(vflag) {
 		verbose = 0;
@@ -339,7 +667,15 @@ int main(int argc, char** argv) {
 		cpu->verbose = false;
 	}
 
-	cpu->run(-1);
+	// run ...
+	if(debug_flag) {
+		printf("Interactive Debug Mode:\n");
+		debug_mode();
+	}
+	else {
+		printf("Run Mode:\n");
+		cpu->run(-1);
+	}
 
 
 	return 0;

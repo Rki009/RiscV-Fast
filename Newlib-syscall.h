@@ -91,7 +91,7 @@ int	_swiread	(int, void *, size_t);
 #include <sys/errno.h>
 #include <sys/time.h>
 #include <stdio.h>
- 
+
 void _exit();
 int close(int file);
 char **environ; // pointer to array of char * strings that define the current environment variables

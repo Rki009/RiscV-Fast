@@ -95,11 +95,13 @@ int32_t Cpu::sys_close(int fd) {
 
 // off_t lseek(int fd, off_t offset, int whence);
 //	lseek() repositions the file offset of the open file description
-//		associated with the file descriptor fd to the argument offset 
+//		associated with the file descriptor fd to the argument offset
 //		according to the directive whence.
 int Cpu::sys_lseek(int fd, int offset, int whence) {
 	printf("sys_lseek: fd = %d, offset = %08x, whence = %d\n", fd, offset, whence);
-	if (fd <= 2) return -1;
+	if(fd <= 2) {
+		return -1;
+	}
 	return ::lseek(fd, offset, whence);
 }
 
@@ -124,7 +126,7 @@ int Cpu::sys_read(uint32_t a0, uint32_t a1, uint32_t a2) {
 			}
 		}
 	}
-	else if (fd == 1 || fd == 2) {
+	else if(fd == 1 || fd == 2) {
 		return EOF;
 	}
 	else {
@@ -134,7 +136,7 @@ int Cpu::sys_read(uint32_t a0, uint32_t a1, uint32_t a2) {
 		printf("Host Read: %s\n", data);
 #endif
 		return ::read(fd, buf, count);
-		
+
 	}
 
 	return read;
@@ -146,6 +148,7 @@ int Cpu::sys_write(uint32_t a0, uint32_t a1, uint32_t a2) {
 	uint8_t* buf = memory->getPtr(a1);
 	int count = a2;
 	int n = 0;
+	// printf("[%d] %.*s\n", fd, count, (char*)buf);
 
 	// stdin
 	if(fd == 1) {
@@ -165,7 +168,7 @@ int Cpu::sys_write(uint32_t a0, uint32_t a1, uint32_t a2) {
 			n++;
 		}
 	}
-	else if (fd <= 0) {
+	else if(fd <= 0) {
 		return EOF;
 	}
 	else {
@@ -193,33 +196,63 @@ int Cpu::sys_write(uint32_t a0, uint32_t a1, uint32_t a2) {
 int32_t Cpu::sys_open(uint32_t pathname, uint32_t flags, uint32_t mode) {
 	// printf("sys_open: pathname=0x%08x, flags=0x%08x, mode=0x%08x\n", pathname, flags, mode);
 	char fname[256];
-	for (int i=0; i<(int)sizeof(fname)-1; ++i) {
+	for(int i=0; i<(int)sizeof(fname)-1; ++i) {
 		int c = memory->read8(pathname+i);
 		fname[i] = c;
 		fname[i+1] = '\0';
-		if (c == '\0') break;
+		if(c == '\0') {
+			break;
+		}
 	}
-	
 
-	if (flags & RISCV_O_CREAT) printf("O_CREAT = %04x\n", RISCV_O_CREAT);
-	if (flags & RISCV_O_APPEND) printf("O_APPEND = %04x\n", RISCV_O_APPEND);
-	if (flags & RISCV_O_WRONLY) printf("O_WRONLY = %04x\n", RISCV_O_WRONLY);
-	if (flags & RISCV_O_RDONLY) printf("O_RDONLY  = %04x\n", RISCV_O_RDONLY );
-	if (flags & RISCV_O_RDWR) printf("O_RDWR  = %04x\n", RISCV_O_RDWR );
-	if (flags & RISCV_O_TRUNC) printf("O_TRUNC = %04x\n", RISCV_O_TRUNC);
-	if (flags & RISCV_O_TMPFILE) printf("O_TMPFILE  = %04x\n", RISCV_O_TMPFILE );
+
+	if(flags & RISCV_O_CREAT) {
+		printf("O_CREAT = %04x\n", RISCV_O_CREAT);
+	}
+	if(flags & RISCV_O_APPEND) {
+		printf("O_APPEND = %04x\n", RISCV_O_APPEND);
+	}
+	if(flags & RISCV_O_WRONLY) {
+		printf("O_WRONLY = %04x\n", RISCV_O_WRONLY);
+	}
+	if(flags & RISCV_O_RDONLY) {
+		printf("O_RDONLY  = %04x\n", RISCV_O_RDONLY);
+	}
+	if(flags & RISCV_O_RDWR) {
+		printf("O_RDWR  = %04x\n", RISCV_O_RDWR);
+	}
+	if(flags & RISCV_O_TRUNC) {
+		printf("O_TRUNC = %04x\n", RISCV_O_TRUNC);
+	}
+	if(flags & RISCV_O_TMPFILE) {
+		printf("O_TMPFILE  = %04x\n", RISCV_O_TMPFILE);
+	}
 	// if (flags & RISCV_O_ASYNC) printf("O_ASYNC = %04x\n", RISCV_O_ASYNC);
-	if (flags & RISCV_O_DIRECTORY) printf("O_DIRECTORY = %04x\n", RISCV_O_DIRECTORY);
+	if(flags & RISCV_O_DIRECTORY) {
+		printf("O_DIRECTORY = %04x\n", RISCV_O_DIRECTORY);
+	}
 
 	// flags need to be remapped from Newlib to Linux (Ubuntu)
 	int new_flags = 0;
-	if ((flags&0x3) == RISCV_O_RDONLY) new_flags |= O_RDONLY;
-	if ((flags&0x3) == RISCV_O_WRONLY) new_flags |= O_WRONLY;
-	if ((flags&0x3) == RISCV_O_RDWR) new_flags |= O_RDWR;
+	if((flags&0x3) == RISCV_O_RDONLY) {
+		new_flags |= O_RDONLY;
+	}
+	if((flags&0x3) == RISCV_O_WRONLY) {
+		new_flags |= O_WRONLY;
+	}
+	if((flags&0x3) == RISCV_O_RDWR) {
+		new_flags |= O_RDWR;
+	}
 
-	if (flags & RISCV_O_CREAT) new_flags |= O_CREAT;
-	if (flags & RISCV_O_APPEND) new_flags |= O_APPEND;
-	if (flags & RISCV_O_TRUNC) new_flags |= O_TRUNC;
+	if(flags & RISCV_O_CREAT) {
+		new_flags |= O_CREAT;
+	}
+	if(flags & RISCV_O_APPEND) {
+		new_flags |= O_APPEND;
+	}
+	if(flags & RISCV_O_TRUNC) {
+		new_flags |= O_TRUNC;
+	}
 
 	printf("Open %s, Flags %04x, Mode = 0%03o\n", fname, flags, mode);
 	printf("  new_flags = %04x\n", new_flags);
@@ -236,11 +269,31 @@ int32_t Cpu::sys_close(uint32_t fd) {
 	(void)fd;
 	printf("sys_close: fd=%d\n", fd);
 	// return -1;	// Error
-	
+
 	// if stdin,stdout or stderr just keep open in the host
-	if (fd <= 2) return 0;
+	if(fd <= 2) {
+		return 0;
+	}
 	return close(fd);
 }
+
+
+// int link(const char *oldpath, const char *newpath);
+int Cpu::sys_link(uint32_t a0, uint32_t a1) {
+	const char* oldpath = (const char*)memory->getPtr(a0);
+	const char* newpath = (const char*)memory->getPtr(a1);
+	printf("Link: %s, %s\n", oldpath, newpath);
+	return ::link(oldpath, newpath);
+}
+
+// int unlink(const char *pathname);
+int Cpu::sys_unlink(uint32_t a0) {
+	const char* pathname = (const char*)memory->getPtr(a0);
+	printf("Unlink: %s\n", pathname);
+	return ::unlink(pathname);
+}
+
+
 
 // See:
 //	https://interrupt.memfault.com/blog/boostrapping-libc-with-newlib
@@ -301,6 +354,14 @@ void Cpu::syscall(void) {
 
 	case SYS_close:
 		reg[10] = sys_close(a0);
+		return;
+
+	case SYS_link:
+		reg[10] = sys_link(a0, a1);
+		return;
+
+	case SYS_unlink:
+		reg[10] = sys_unlink(a0);
 		return;
 
 	case SYS_fstat:

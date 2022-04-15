@@ -51,6 +51,30 @@ void fatal(const char* fmt, ...) {
 	exit(-1);
 }
 
+/*
+ * Put out a warning
+ */
+void warn(const char* fmt, ...) {
+	char buffer[256];
+	va_list args;
+	va_start(args, fmt);
+	vsnprintf(buffer, sizeof(buffer), fmt, args);
+	printf("Warn: %s", buffer);
+	va_end(args);
+}
+
+/*
+ * Put out a error
+ */
+void error(const char* fmt, ...) {
+	char buffer[256];
+	va_list args;
+	va_start(args, fmt);
+	vsnprintf(buffer, sizeof(buffer), fmt, args);
+	printf("Error: %s", buffer);
+	va_end(args);
+}
+
 void _trace(const char* file, const char* func, int line, const char* fmt, ...) {
 	static FILE* tfp = NULL;
 	char buffer[1024];

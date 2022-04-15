@@ -178,8 +178,8 @@ public:
 	int sys_read(uint32_t a0, uint32_t a1, uint32_t a2);
 	int sys_write(uint32_t a0, uint32_t a1, uint32_t a2);
 	int sys_lseek(int file, int offset, int whence);
-
-
+	int sys_link(uint32_t a0, uint32_t a1);
+	int sys_unlink(uint32_t a0);
 
 
 #if RV64
@@ -239,5 +239,5 @@ extern Optable optable[];
 
 extern Cpu* cpu;
 void Sleep(int waitTime);
-bool decode(uint32_t addr, uint32_t code, Vliw* vlp);
+bool decode2vliw(uint32_t addr, uint32_t code, Vliw* vlp);
 bool decodeCompressed(uint32_t addr, uint32_t code, Vliw* vlp);

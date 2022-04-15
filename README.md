@@ -3,8 +3,9 @@
 ## Features
 
 - Very fast simulation of RiscV 32 architecture
-    * RiscV ISA is converted in to VERY FAST VLIW (Very Long Instruction Word)
-    * VLIW VERY FAST Execution Engine
+    * RiscV ISA is converted in to VLIW (Very Long Instruction Word)
+    * VLIW FAST Execution Engine
+	* 4 times faster than the SPIKE Risc-V ISA Simulator
     * Support for memory bounds/access, instruction logging, breakpoint debugging
     * Time interrupt, approximately 100Hz (programmable)
     * External interrupt from user defined source

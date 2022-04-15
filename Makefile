@@ -9,7 +9,8 @@ ISA_DIR=../RiscV-ISA
 OPT = -DELF32=1 -DRV32=1
 
 # CFLAGS = -O2 -Wno-write-strings $(OPT)
-CFLAGS = -g -O3 -Wall -Wno-write-strings $(OPT)
+# CFLAGS = -g -O3 -Wall -Wno-write-strings $(OPT)
+CFLAGS = -MD -O3 -Wall -Wno-write-strings $(OPT)
 
 # System name: "linux"
 UNAME_S := $(shell uname -s)
@@ -20,23 +21,25 @@ ifeq ($(UNAME_P),x86_64)
 endif
 
 
-LDLAGS = -g
+# LDLAGS = -g
 
-INCL = -I.\Include
+# INCL = -I.\Include
 CC = g++
 
 # SRC = LogIt.cpp Functions.cpp mystrftime.cpp Epoch.cpp Erlang.cpp
 # SRC = $(wildcard *.cpp)
-SRC = $(PROJ).cpp Elf64.cpp Cpu.cpp Decode.cpp Compressed.cpp Util.cpp Newlib.cpp # getopt.c
+SRC = $(PROJ).cpp Elf64.cpp Cpu.cpp Decode.cpp Compressed.cpp Util.cpp Newlib.cpp rv_disasm.cpp rv_compile.cpp rv_csr.cpp
 OBJ = $(SRC:%.cpp=%.o)
 HDR = $(wildcard *.h)
+
+MEMORY = -T0x00000000:0x00100000 -D0x40000000:0x00100000
 
 # .SILENT: clean
 
 .PHONY: all run clean clobber update run_sw++
 
 %.o:%.cpp $(HDR) Makefile
-	$(CC) $(INCL) -MD $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+	$(CC) $(INCL) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 all: $(PROJ)
 #	@echo "Src = $(SRC)"
@@ -53,13 +56,13 @@ demo: clean all
 	
 run: all
 ifeq ($(UNAME_P),x86_64)
-	-cd ./sw/Test_001 && make all && cd ..
+	cd ./sw/Test_001 && make all && cd ..
 endif
-	./$(PROJ) --newlib ./sw/Test_001/Test32.elf
+	./$(PROJ) --newlib $(MEMORY) ./sw/Test_001/Test32.elf
 
 run_sw++: all
 ifeq ($(UNAME_P),x86_64)
-	-cd ./sw/sw++ && make all && cd ..
+	cd ./sw/sw++ && make all && cd ..
 endif
 	./$(PROJ) --core ./sw/sw++/bin/progmem.elf
 
@@ -71,6 +74,11 @@ endif
 #		q		- quit	
 gdb: all
 	gdb -ex=run --arg ./$(PROJ) --core -l ./sw/sw++/bin/progmem.elf
+
+# run benchmarks
+bench: all
+	./$(PROJ) --newlib ./sw/Test_001/Test32.elf 2>&1 | grep 'DMIPS\|dhrystones\|Cycle\:\|Elapsed'
+
 	
 update: clean
 	cp $(ISA_DIR)/OpTable.h .

@@ -61,7 +61,6 @@ bool Cpu::run(uint64_t n) {
 		}
 
 
-
 #ifndef VERY_FAST
 		// if((pc&0x00000003) != 0) {
 		if((pc&0x00000001) != 0) {
@@ -89,28 +88,7 @@ bool Cpu::run(uint64_t n) {
 			else {
 				printf("BreakPoint @ 0x%08x\n", (uint32_t)pc);
 			}
-again:
-			fgets(buf, sizeof(buf), stdin);
-			if(strcmp(buf, "exit\n")==0) {
-				return true;
-			}
-			else if(strcmp(buf, "s\n")==0 || strcmp(buf, "\n")==0) {
-				singleStep = true;
-			}
-			else if(strcmp(buf, "r\n")==0 || strcmp(buf, "run\n")==0) {
-				singleStep = false;
-			}
-			else if(strcmp(buf, "v\n")==0 || strcmp(buf, "+\n")==0 || strcmp(buf, "verbose\n")==0) {
-				++verbose;
-				printf("Verbose = %d\n", verbose);
-				cpu->dump32();
-				goto again;
-			}
-			else if(strcmp(buf, "-\n")==0) {
-				verbose = 0;
-				printf("Verbose = %d\n", verbose);
-				goto again;
-			}
+			running = false;
 		}
 #endif
 
@@ -122,7 +100,7 @@ again:
 		Vliw* vcp = &vliw_insn[vliw_index];
 		if(vcp->opcode == VLIW_NONE) {
 			unsigned code = fetch();		// do not advance the pc
-			decode(pc, code, vcp);
+			decode2vliw(pc, code, vcp);
 		}
 		vlp = vcp;
 #else
@@ -131,14 +109,14 @@ again:
 		if((code&0x00000003) == 0x00000003) {
 			pc_inc = pc+4;	// full 32 bit
 #if 0
-			decode(pc, code, vlp);
+			decode2vliw(pc, code, vlp);
 #else
 			// lookup the instruction in the vliw cache, if ok ... use it
 			uint32_t vliw_index = (pc>>1);
 			// Vliw* vcp = &vliw_insn[vliw_index];
 			Vliw* vcp = &vliw_insn[vliw_index];
 			if(vcp->opcode == VLIW_NONE) {
-				decode(pc, code, vcp);
+				decode2vliw(pc, code, vcp);
 			}
 			vlp = vcp;
 #endif
@@ -247,10 +225,11 @@ void Cpu::sigTick(void) {
 
 
 
-bool Cpu::execute(Vliw* vlp) {
+bool Cpu::execute(register Vliw* vlp) {
 	// uint64_t addr64;
 	uint32_t addr32;
 	uint32_t temp32;
+	int64_t temp64;
 
 	switch(vlp->opcode) {
 	case VLIW_NOP:
@@ -373,6 +352,7 @@ bool Cpu::execute(Vliw* vlp) {
 		reg[vlp->rd] = reg[vlp->rs1] & reg[vlp->rs2];
 		break;
 
+#if 0
 	case VLIW_MUL:
 		reg[vlp->rd] = reg[vlp->rs1] * reg[vlp->rs2];
 		break;
@@ -380,6 +360,7 @@ bool Cpu::execute(Vliw* vlp) {
 	case VLIW_DIV:
 		reg[vlp->rd] = reg[vlp->rs1] / reg[vlp->rs2];
 		break;
+#endif
 
 	case VLIW_ADDI:
 		reg[vlp->rd] = reg[vlp->rs1] + vlp->imm;
@@ -541,6 +522,64 @@ bool Cpu::execute(Vliw* vlp) {
 		}
 		break;
 
+
+#ifdef DO_MUL_DIV
+	//-----------------------------------------------------------------
+	//		MUL/DIV/REM
+	//-----------------------------------------------------------------
+	case VLIW_MUL:
+		reg[vlp->rd] = (uint32_t)reg[vlp->rs1] * (uint32_t)reg[vlp->rs2];
+		break;
+
+	case VLIW_MULH:
+		temp64 = (int64_t)((int32_t)reg[vlp->rs1]) * (int64_t)((int32_t)reg[vlp->rs2]);
+		reg[vlp->rd] = (uint32_t)(temp64>>32);
+		break;
+
+	case VLIW_MULHU:
+		temp64 = (int64_t)((uint32_t)reg[vlp->rs1]) * (int64_t)((uint32_t)reg[vlp->rs2]);
+		reg[vlp->rd] = (uint32_t)(temp64>>32);
+		break;
+
+	case VLIW_MULHSU:
+		temp64 = (int64_t)((int32_t)reg[vlp->rs1]) * (int64_t)((uint32_t)reg[vlp->rs2]);
+		reg[vlp->rd] = (uint32_t)(temp64>>32);
+		break;
+
+	case VLIW_DIV:
+		reg[vlp->rd] = (int32_t)reg[vlp->rs1] / (int32_t)reg[vlp->rs2];
+		break;
+
+	case VLIW_DIVU:
+		reg[vlp->rd] = (uint32_t)reg[vlp->rs1] / (uint32_t)reg[vlp->rs2];
+		break;
+
+	case VLIW_REM:
+		reg[vlp->rd] = (int32_t)reg[vlp->rs1] % (int32_t)reg[vlp->rs2];
+		break;
+
+	case VLIW_REMU:
+		reg[vlp->rd] = (uint32_t)reg[vlp->rs1] % (uint32_t)reg[vlp->rs2];
+		break;
+
+#if RV64
+	case VLIW_MULW:
+		break;
+
+	case VLIW_DIVW:
+		break;
+
+	case VLIW_DIVUW:
+		break;
+
+	case VLIW_REMW:
+		break;
+
+	case VLIW_REMUW:
+		break;
+#endif
+
+#endif		// DO_MUL_DIV
 
 	//-----------------------------------------------------------------
 	//		System
@@ -797,6 +836,7 @@ bool Cpu::execute(Vliw* vlp) {
 			fprintf(tfp, "  %s <= 0x%08x\n", rd, (uint32_t)reg[vlp->rd]);
 			break;
 
+
 		default:
 			if(vlp->rd != 0) {
 				fprintf(tfp, "  %s = %08x\n", rd, (uint32_t)reg[vlp->rd]);
@@ -997,12 +1037,12 @@ void Cpu::csr_insn(int type, int csr, int rd, int rs, uint32_t imm32) {
 			break;
 
 		case RISCV_CSR_MCYCLE: 		// mcycle		Clock Cycles Executed Counter
-			// should set upper half first ...			
+			// should set upper half first ...
 			cycle = new_val;
 			break;
 
 		case RISCV_CSR_MCYCLEH:		// mcycleh		Upper 32 bits of cycle, RV32I only
-			// note lower half is set to zero ...			
+			// note lower half is set to zero ...
 			cycle = (((uint64_t)new_val)<<32);
 		default:
 			break;

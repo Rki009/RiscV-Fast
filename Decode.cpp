@@ -143,8 +143,7 @@ uint32_t doS2imm12(uint32_t code) {
 	return imm12;
 }
 
-
-bool decode(uint32_t addr, uint32_t code, Vliw* vlp) {
+bool decode2vliw(uint32_t addr, uint32_t code, Vliw* vlp) {
 	if(cpu->verbose) {
 		printf("decode: 0x%08x - 0x%08x\n", addr, code);
 	}
@@ -338,7 +337,7 @@ bool decode(uint32_t addr, uint32_t code, Vliw* vlp) {
 
 void execute(uint32_t addr, uint32_t code) {
 	Vliw* vlp= new Vliw;
-	decode(addr, code, vlp);
+	decode2vliw(addr, code, vlp);
 	vlp->dump();
 
 	cpu->pc = addr;

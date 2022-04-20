@@ -22,12 +22,12 @@
 #include "Cpu.h"
 #include "Elf64.h"
 
-int Version = 0;
-int Release = 2;
+int Version = 1;
+int Release = 0;
 
 // options
 bool doSignature = false;
-bool quiet = false;			// run quite -- very minimal output
+bool quiet = true;				// run quite -- very minimal output
 
 
 FILE* lfp;		// log file
@@ -244,6 +244,7 @@ void show_current(void) {
 	printf("0x%08x: 0x%08x  %s\n", pc, insn, buf);
 }
 
+
 int debug_mode(void) {
 	int core_id = 0;	// default to core 0
 
@@ -404,17 +405,24 @@ void usage(void) {
 	printf("	-v			    - verbose\n");
 	printf("	-q			    - quiet\n");
 	printf("    -c              - compile to Warp output\n");
+	printf("    -d              - output disassembled code\n");
+	printf("    -t              - output execution trace\n");
 	printf("	-i			    - interactive debug mode\n");
 	printf("	-u			    - unified memory, .text/.data same address space\n");
+	printf("	--newlib	    - support newlib semi-hosting\n");
+	// printf("	--core	        - core I+D memory\n");
 };
 
 
 int main(int argc, char** argv) {
 	bool vflag = false;			// verbose
-	bool c_flag = true;		// c - compile to Warp output
+	bool c_flag = false;		// c - compile to Warp output
 	bool lflag = false;			// logfile
-	bool uflag = false;			// unified memory
+	bool uflag = false;			// unified memory, I&D same address space
 	bool debug_flag = false;	// interactive debugging
+	bool dis_flag = false;		// output disassemble
+	bool trace_flag = false;	// output execution trace
+
 	// int bflag = 0;
 	// char* breakStr = NULL;
 	char* textBase = NULL;
@@ -430,11 +438,15 @@ int main(int argc, char** argv) {
 		if(op[0]=='-' && op[1] == '-') {
 			if(strcmp(argv[index], "--newlib")==0) {
 				do_newlib = true;
-				printf("Newlib = %d\n", do_newlib);
+				if(!quiet) {
+					printf("Newlib = %d\n", do_newlib);
+				}
 			}
 			else if(strcmp(argv[index], "--core")==0) {
 				do_core = true;
-				printf("Do_core = %d\n", do_core);
+				if(!quiet) {
+					printf("Do_core = %d\n", do_core);
+				}
 			}
 			else {
 				fprintf(stderr, "Unknown option: %s\n", argv[index]);
@@ -450,7 +462,7 @@ int main(int argc, char** argv) {
 	}
 
 	opterr = 0;
-	while((c = getopt(argc, argv, "cilvqub:T:D:H:")) != -1) {
+	while((c = getopt(argc, argv, "cdilvqub:T:D:H:")) != -1) {
 		// printf("c = '%c'\n", c);
 
 		switch(c) {
@@ -461,7 +473,7 @@ int main(int argc, char** argv) {
 
 		// quiet flag
 		case 'q':
-			quiet = true;
+			quiet = !quiet;
 			vflag = 0;
 			break;
 
@@ -470,22 +482,34 @@ int main(int argc, char** argv) {
 			c_flag = true;
 			break;
 
+		// t - output execution trace
+		case 't':
+			trace_flag = true;
+			break;
+
+		// d - output disassemble
+		case 'd':
+			dis_flag = true;
+			break;
+
 		// interactive debug flag
 		case 'i':
 			debug_flag = !debug_flag;
 			break;
 
 		case 'v':
-			vflag = 1;
+			vflag = true;
 			break;
 
 		// -u, unified memory
 		case 'u':
-			uflag = 1;
+			uflag = true;
 			break;
+
 		case 'l':
-			lflag = 1;
+			lflag = true;
 			break;
+
 		// case 'b':
 		//	breakStr = optarg;
 		//	break;
@@ -494,10 +518,12 @@ int main(int argc, char** argv) {
 		case 'T':
 			textBase = optarg;
 			break;
+
 		// -D addr, .data base address
 		case 'D':
 			dataBase = optarg;
 			break;
+
 		// -H addr, host base address
 		case 'H':
 			hostBase = optarg;
@@ -524,7 +550,9 @@ int main(int argc, char** argv) {
 	// printf("vflag = %d, breakStr = %s\n", vflag, breakStr);
 
 	for(index = optind; index < argc; index++) {
-		printf("Non-option argument %s\n", argv[index]);
+		if(!quiet) {
+			printf("Non-option argument %s\n", argv[index]);
+		}
 		if(index == optind) {
 			elfFile = argv[index];
 		}
@@ -537,7 +565,7 @@ int main(int argc, char** argv) {
 
 	if(!quiet) {
 		printf("MySim - RV32/Rv64\n");
-		printf("  (C) Ron K. Irvine, 2020.\n");
+		printf("  (C) Ron K. Irvine, 2022.\n");
 		// printf("  Build: %s %s\n", __DATE__, __TIME__);
 		printf("  Build: V%d.%02d, %s\n", Version, Release, buildDate());
 	}
@@ -554,6 +582,7 @@ int main(int argc, char** argv) {
 		}
 		printf("Textbase = '%s' => 0x%08x:0x%08x\n", textBase, text_addr, text_size);
 	}
+
 	if(dataBase != NULL) {
 		uint32_t data_addr = 0;
 		uint32_t data_size = 0;
@@ -566,9 +595,18 @@ int main(int argc, char** argv) {
 		}
 		printf("Database = '%s' => 0x%08x:0x%08x\n", dataBase, data_addr, data_size);
 	}
+
 	if(hostBase != NULL) {
 		printf("Host Address = %s - 0x%08x\n", hostBase, getValue(hostBase));
 		hostAddr = getValue(hostBase);
+	}
+
+	if(uflag) {
+		memory->dataMem = memory->insnMem;
+		// memory->dataMem->memBase = memory->insnMem->memBase
+		// if(!quiet) {
+		printf("Unified memory!\n");
+		// }
 	}
 
 	if(!quiet) {
@@ -576,12 +614,7 @@ int main(int argc, char** argv) {
 		printf(".data: %08x %08x\n", memory->dataMem->memBase, memory->dataMem->memLen);
 		printf("Host:  %08x %08x\n", hostAddr, hostSize);
 	}
-	if(uflag) {
-		memory->dataMem = memory->insnMem;
-		if(!quiet) {
-			printf("Unified memory!\n");
-		}
-	}
+
 
 	if(!quiet) {
 		printf("Elf file: %s\n", elfFile);
@@ -600,13 +633,15 @@ int main(int argc, char** argv) {
 	uint32_t entry = 0;
 	readElf(elfFile, memory->insnMem, memory->dataMem, &entry);
 
-	printf(".text:\n");
-	for(Elf32_Info* ip=memory->insnMem->elf32; ip != NULL; ip = ip->next) {
-		printf("  %-12.12s 0x%08x  0x%08x\n", ip->name, ip->addr, ip->size);
-	}
-	printf(".data:\n");
-	for(Elf32_Info* ip=memory->dataMem->elf32; ip != NULL; ip = ip->next) {
-		printf("  %-12.12s 0x%08x  0x%08x\n", ip->name, ip->addr, ip->size);
+	if(!quiet) {
+		printf(".text:\n");
+		for(Elf32_Info* ip=memory->insnMem->elf32; ip != NULL; ip = ip->next) {
+			printf("  %-12.12s 0x%08x  0x%08x\n", ip->name, ip->addr, ip->size);
+		}
+		printf(".data:\n");
+		for(Elf32_Info* ip=memory->dataMem->elf32; ip != NULL; ip = ip->next) {
+			printf("  %-12.12s 0x%08x  0x%08x\n", ip->name, ip->addr, ip->size);
+		}
 	}
 
 	// get Length of the .text section
@@ -619,7 +654,9 @@ int main(int argc, char** argv) {
 			break;
 		}
 	}
-	printf(".text: start = 0x%08x, end = 0x%08x\n", text_start, text_end);
+	if(!quiet) {
+		printf(".text: start = 0x%08x, end = 0x%08x\n", text_start, text_end);
+	}
 
 
 	// get total Length of the .data section
@@ -634,11 +671,15 @@ int main(int argc, char** argv) {
 			data_end = len;
 		}
 	}
-	printf(".data: start = 0x%08x, end = 0x%08x\n", data_start, data_end);
+	if(!quiet) {
+		printf(".data: start = 0x%08x, end = 0x%08x\n", data_start, data_end);
+	}
 
 
 #if 1
-	disasm_all(text_start, text_end);
+	if(dis_flag) {
+		disasm_all(text_start, text_end);
+	}
 #endif
 
 	if(c_flag) {
@@ -657,6 +698,7 @@ int main(int argc, char** argv) {
 	// set the stack to the top of data memory
 	cpu->setStack(memory->dataMem->memBase + memory->dataMem->memLen-16);
 
+	cpu->set_trace(trace_flag);
 
 	if(vflag) {
 		verbose = 0;
@@ -673,7 +715,9 @@ int main(int argc, char** argv) {
 		debug_mode();
 	}
 	else {
-		printf("Run Mode:\n");
+		if(!quiet) {
+			printf("Run Mode:\n");
+		}
 		cpu->run(-1);
 	}
 

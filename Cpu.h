@@ -85,6 +85,7 @@ public:
 	int verbose;
 	bool singleStep;
 	bool irq;			// request for interrupt
+	bool trace;
 
 
 	// CSR Registers
@@ -124,6 +125,11 @@ public:
 		heap = 0;
 		endOfData = edata;
 	};
+	
+	void set_trace(bool t) {
+		trace = t;
+	};
+	
 
 
 	bool run(uint64_t n);
@@ -217,6 +223,9 @@ public:
 			const char* opname = &getVliwName(vlp->opcode)[5];
 			fprintf(lfp, "%08x: %s %s,%s,%s,0x%08x\n", pc, opname, getRegName(vlp->rd),
 				getRegName(vlp->rs1), getRegName(vlp->rs2), vlp->imm);
+			fflush(lfp);
+			// printf("%08x: %s %s,%s,%s,0x%08x\n", pc, opname, getRegName(vlp->rd),
+			//	getRegName(vlp->rs1), getRegName(vlp->rs2), vlp->imm);
 
 		}
 	};

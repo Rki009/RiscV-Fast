@@ -3,9 +3,10 @@
 #pragma once
 
 // Fastest possible
-#define VERY_FAST
-
-#define DO_MUL_DIV 1
+#define VERY_FAST			// Fastest possible, skip checks
+#define NO_COMPRESSED		// No compressed instruction support
+#define DO_MUL_DIV 1		// Enable MUL/DIV instruction
+#define DEBUG 0				// 1 = Enable debug print/trace
 
 // prototypes
 extern FILE* lfp;
@@ -122,7 +123,7 @@ public:
 			fatal("Segment: alloc()\n");
 			exit(-1);
 		}
-		printf("%s: 0x%08x, 0x%08x, 0x%08x\n", memName, memBase, memLen, memMask);
+		if (!quiet) printf("%s: 0x%08x, 0x%08x, 0x%08x\n", memName, memBase, memLen, memMask);
 	};
 
 	bool ok(uint32_t addr) {

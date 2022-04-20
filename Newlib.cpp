@@ -267,7 +267,10 @@ int32_t Cpu::sys_open(uint32_t pathname, uint32_t flags, uint32_t mode) {
 
 int32_t Cpu::sys_close(uint32_t fd) {
 	(void)fd;
-	printf("sys_close: fd=%d\n", fd);
+	// if (!quiet) {
+	if(cpu->verbose) {
+		printf("sys_close: fd=%d\n", fd);
+	}
 	// return -1;	// Error
 
 	// if stdin,stdout or stderr just keep open in the host
@@ -326,15 +329,18 @@ void Cpu::syscall(void) {
 		return;
 
 	case SYS_exit:
-		printf("  Exit ....\n");
-		printf("    Cycles = %s\n", dec64(cycle));
-		if(a0 == 0) {
-			printf("    Normal Exit (%d)\n", a0);
+		// if (!quiet) {
+		if(cpu->verbose) {
+			printf("*** Newlib Exit ***\n");
+			printf("    Cycles = %s\n", dec64(cycle));
+			if(a0 == 0) {
+				printf("    Normal Exit (%d)\n", a0);
+			}
+			else {
+				printf("    Exit Code = %d\n", a0);
+			}
 		}
-		else {
-			printf("    Exit Code = %d\n", a0);
-		}
-		exit(0);
+		exit(a0);
 
 	case SYS_read:
 		reg[10] = sys_read(a0, a1, a2);

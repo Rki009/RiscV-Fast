@@ -40,7 +40,12 @@ const char* getVliwName(int n) {
 	return VliwName[n];
 }
 
-Vliw vliw_insn[0x100000];	// 1M instructions
+#ifdef NO_COMPRESSED
+Vliw vliw_insn[0x100000];	// 1M instructions, must be power of 2
+#else
+Vliw vliw_insn[0x200000];	// 1M instructions, must be power of 2
+#endif
+uint32_t vliw_mask = (sizeof(vliw_insn)/sizeof(Vliw))-1;
 
 Vliw* vliw_nop = new Vliw(VLIW_NOP);
 
@@ -92,33 +97,41 @@ bool Cpu::run(uint64_t n) {
 		}
 #endif
 
-#ifdef VERY_FAST
+#ifdef NO_COMPRESSED
 		pc_inc = pc+4;	// full 32 bit
 		// lookup the instruction in the vliw cache, if ok ... use it
 		uint32_t vliw_index = (pc>>2);
-		// Vliw* vcp = &vliw_insn[vliw_index];
-		Vliw* vcp = &vliw_insn[vliw_index];
+
+		Vliw* vcp = &vliw_insn[vliw_index&vliw_mask];
 		if(vcp->opcode == VLIW_NONE) {
 			unsigned code = fetch();		// do not advance the pc
 			decode2vliw(pc, code, vcp);
 		}
 		vlp = vcp;
-#else
+#else	// !NO_COMPRESSED
 		unsigned code = fetch();		// do not advance the pc
-		// unsigned code = memory->fetch32(pc);		// do not advance the pc
-		if((code&0x00000003) == 0x00000003) {
+		if((code&0x00000003) == 0x00000003) {	// 32 bit instruction
 			pc_inc = pc+4;	// full 32 bit
-#if 0
+#if 1
 			decode2vliw(pc, code, vlp);
 #else
+			// ***** WARNING **** - this code is broken somehow???
 			// lookup the instruction in the vliw cache, if ok ... use it
-			uint32_t vliw_index = (pc>>1);
-			// Vliw* vcp = &vliw_insn[vliw_index];
-			Vliw* vcp = &vliw_insn[vliw_index];
+			// uint32_t vliw_index = (pc>>1);
+			uint32_t vliw_index = pc;
+
+			Vliw* vcp = &vliw_insn[vliw_index&vliw_mask];
 			if(vcp->opcode == VLIW_NONE) {
+				printf("Decode: %08x - %08x\n", pc, code);
 				decode2vliw(pc, code, vcp);
 			}
 			vlp = vcp;
+
+			if(DEBUG || cpu->verbose) {
+				printf("Insn32: addr=0x%08x, code=0x%08x\n", pc, (uint32_t)code);
+				printf("  vlp: %d, %d, %d, %d, %08x\n", vlp->opcode,
+					vlp->rd, vlp->rs1, vlp->rs2, vlp->imm);
+			}
 #endif
 		}
 		else  {
@@ -126,7 +139,7 @@ bool Cpu::run(uint64_t n) {
 			code &= 0x0000ffff;
 			decodeCompressed(pc, code, vlp);
 		}
-#endif
+#endif	// NO_COMPRESSED
 
 		pc_next = pc_inc;
 
@@ -138,6 +151,8 @@ bool Cpu::run(uint64_t n) {
 			cpu->log(vlp);
 		}
 #endif
+
+
 
 		// check for interrupts
 		//	do this every 16 cycles just to reduce
@@ -185,6 +200,7 @@ bool Cpu::run(uint64_t n) {
 	}
 	return true;
 };
+
 
 void Cpu::sigTick(void) {
 	static FILE* sigFp = NULL;
@@ -1070,17 +1086,18 @@ void Cpu::csr_insn(int type, int csr, int rd, int rs, uint32_t imm32) {
 void Cpu::ecall(void) {
 	// save the current PC, EPC is this instruction!!!
 	mepc = pc;
-	mcause = RISCV_EXCP_ECALL_U;	// mcause[31] = 0, exception
+	mcause = RISCV_EXCP_ECALL_U;		// mcause[31] = 0, exception
 	// vector off to trap handler
 	pc_next = mtvec;
 
 	if((mstatus&RISCV_MSTATUS_MIE)==0) {
-		mstatus &= ~RISCV_MSTATUS_MPIE;    // clear mpie
+		mstatus &= ~RISCV_MSTATUS_MPIE;	// clear mpie
 	}
 	else {
-		mstatus |= RISCV_MSTATUS_MPIE;    // set mpie
+		mstatus |= RISCV_MSTATUS_MPIE;	// set mpie
 	}
 };
+
 
 void Cpu::ebreak(void) {
 	// save the current PC, EPC is this instruction!!!
@@ -1089,10 +1106,10 @@ void Cpu::ebreak(void) {
 	// vector off to trap handler
 	pc_next = mtvec;
 	if((mstatus&RISCV_MSTATUS_MIE)==0) {
-		mstatus &= ~RISCV_MSTATUS_MPIE;    // clear mpie
+		mstatus &= ~RISCV_MSTATUS_MPIE;	// clear mpie
 	}
 	else {
-		mstatus |= RISCV_MSTATUS_MPIE;    // set mpie
+		mstatus |= RISCV_MSTATUS_MPIE;	// set mpie
 	}
 };
 
@@ -1100,12 +1117,12 @@ void Cpu::mret(void) {
 	// restore the previous PC
 	pc_next = mepc;
 	if((mstatus&RISCV_MSTATUS_MPIE)==0) {
-		mstatus &= ~RISCV_MSTATUS_MIE;    // clear mie
+		mstatus &= ~RISCV_MSTATUS_MIE;	// clear mie
 	}
 	else {
-		mstatus |= RISCV_MSTATUS_MIE;    // set mie
+		mstatus |= RISCV_MSTATUS_MIE;	// set mie
 	}
-	mstatus &= ~RISCV_MSTATUS_MPIE;	// clear mpie, not needed, just reduce state leaking
+	mstatus &= ~RISCV_MSTATUS_MPIE;		// clear mpie, not needed, just reduce state leaking
 };
 
 bool Cpu::do_external_irq(void) {
@@ -1117,8 +1134,8 @@ bool Cpu::do_external_irq(void) {
 		return false;
 	}
 
-	mstatus |= RISCV_MSTATUS_MPIE;	// set previous enabled
-	mstatus &= ~RISCV_MSTATUS_MIE;	// clear enable bit
+	mstatus |= RISCV_MSTATUS_MPIE;		// set previous enabled
+	mstatus &= ~RISCV_MSTATUS_MIE;		// clear enable bit
 	mepc = pc;
 	mcause = 0x80000000 | RISCV_INTR_MEI;	// mcause[31] = 1, interrupt
 	// vector off to trap handler

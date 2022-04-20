@@ -154,6 +154,29 @@ A custom register rand32 has been added. It provides an interface to a equivalen
 A makefile is included. RiscVFAST has been built and tested using Ubuntu (linux) under Windows (wsl) and on a Raspberry Pi 4.
 "make demo" will build RiscVFAST and run demo32.elf. The RV32I program demo32 tests basic ISA instructions, floating point emulation, access to CSRs, ebreak exception, time interrupt and newlib access. I addition it runs Drytsone for performance demonstration.
 
+## Hello.c
+	#include <stdio.h>
+	int main(void) {
+		printf("Hello World!\n");
+		return 0;
+	}
+
+### Compile with:
+	/opt/riscv_11.1/bin/riscv64-unknown-elf-gcc -march=rv32i -mabi=ilp32 -Wl,-Ttext=0x00000000 -Wl,-Tdata=0x40000000 hello.c -o Hello.elf
+
+### Run with:
+	../../RiscVFast --newlib Hello.elf
+
+
+## Issues
+I am looking into two issue:
+
+1) Support for 16 bit instruction compression is buggy. Compile RiscVFast with "#define NO_COMPRESSED" in RiscVFast.h. Straight 32 bit instruction code only is execute faster than compressed code.
+
+2) Unified memory has a problem, when .text and .data are in the same memory area. This would be nice to have since it is the default for gcc and would remove the need for explicitly defining the memory layout with -Wl,-Ttext= and -Wl,-Tdata= options. More work to be done ...
+
+
+
 ## Future
 Some future work ...
 - Add support for M, A, F instructions

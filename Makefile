@@ -60,6 +60,12 @@ ifeq ($(UNAME_P),x86_64)
 endif
 	./$(PROJ) --newlib $(MEMORY) ./sw/Test_001/Test32.elf
 
+run_c: all
+ifeq ($(UNAME_P),x86_64)
+	cd ./sw/Test_001 && make all && cd ..
+endif
+	./$(PROJ) --newlib $(MEMORY) ./sw/Test_001/Test32c.elf
+
 run_sw++: all
 ifeq ($(UNAME_P),x86_64)
 	cd ./sw/sw++ && make all && cd ..

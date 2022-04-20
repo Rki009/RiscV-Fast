@@ -152,12 +152,18 @@ bool decodeCompressed(uint32_t addr, uint32_t code, Vliw* vlp) {
 		vlp->rs1 = nvlp->rs1;
 		vlp->rs2 = nvlp->rs2;
 		vlp->imm = nvlp->imm;
+		if(DEBUG) {
+			printf("Fast32: addr=0x%08x, code=0x%04x\n", addr, (uint16_t)code);
+			printf("  vlp: %d, %d, %d, %d, %08x\n", vlp->opcode,
+				vlp->rd, vlp->rs1, vlp->rs2, vlp->imm);
+
+		}
 		return true;
 	}
 #endif
 
-	if(cpu->verbose) {
-		printf("Compressed: addr=0x%08x, code=0x%04x\n", addr, (uint16_t)code);
+	if(DEBUG || cpu->verbose) {
+		printf("Comp32: addr=0x%08x, code=0x%04x\n", addr, (uint16_t)code);
 	}
 	// init the Vliw to zero
 	vlp->opcode = VLIW_NOP;
@@ -490,6 +496,14 @@ bool decodeCompressed(uint32_t addr, uint32_t code, Vliw* vlp) {
 		break;
 #endif
 
+	// c.ebreak
+	case VLIW_C_EBREAK:
+		vlp->opcode = VLIW_EBREAK;
+		vlp->rd = 0;
+		vlp->rs1 = 0;
+		vlp->rs2 = 0;
+		vlp->imm = 0;
+		break;
 
 	default:
 		printf("Not found: %s, 0x%08x, 0x%08x, %s\n", otp->bitText, otp->code, otp->mask, otp->asmText);
@@ -499,6 +513,10 @@ bool decodeCompressed(uint32_t addr, uint32_t code, Vliw* vlp) {
 
 	// vlp->dump();
 	// cpu->dump32();
+	if (DEBUG) {
+		printf("  vlp: %d, %d, %d, %d, %08x\n", vlp->opcode,
+			vlp->rd, vlp->rs1, vlp->rs2, vlp->imm);
+	}
 
 	// update fast table
 	if(fastTable[code&0xffff] == NULL) {

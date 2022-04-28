@@ -19,7 +19,6 @@
 
 #include "riscv_csr.h"
 
-
 typedef struct {
 	int			num;
 	const char* name;
@@ -47,7 +46,6 @@ const char* getSyscallName(int n) {
 	return "???";
 };
 
-
 // int gettimeofday(struct timeval *tv, struct timezone *tz );
 uint32_t Cpu::sys_gettimeofday(uint32_t a0) {
 	// struct timeval {
@@ -57,12 +55,7 @@ uint32_t Cpu::sys_gettimeofday(uint32_t a0) {
 	// printf("Ptr to: %08x\n", a0);
 	// fflush(stdout);
 
-
 	uint32_t* ptr = (uint32_t*)memory->getPtr(a0);
-#if 0
-	ptr[0] = time(NULL);
-	ptr[1] = 0;
-#else
 
 	//	struct timeval {
 	//		time_t			tv_sec;		// uint64_t - seconds
@@ -78,7 +71,6 @@ uint32_t Cpu::sys_gettimeofday(uint32_t a0) {
 	ptr[0] = (uint32_t)temp64;	// lsb Seconds
 	ptr[1] = (uint32_t)((temp64)>>32);	// msb Seconds
 	ptr[2] = (uint32_t)tv.tv_usec;			// microseconds
-#endif
 	return(0);	// success
 }
 
@@ -130,11 +122,6 @@ int Cpu::sys_read(uint32_t a0, uint32_t a1, uint32_t a2) {
 		return EOF;
 	}
 	else {
-#if 0
-		char* data = (char*)malloc(count);
-		::read(fd, data, count);
-		printf("Host Read: %s\n", data);
-#endif
 		return ::read(fd, buf, count);
 
 	}
@@ -178,8 +165,6 @@ int Cpu::sys_write(uint32_t a0, uint32_t a1, uint32_t a2) {
 	return n;
 }
 
-
-
 // RiscV Newlib fcntl.h
 #define RISCV_O_CREAT	0x0200  /* open with file create */
 #define RISCV_O_TRUNC	0x0400  /* open with truncation */
@@ -192,7 +177,6 @@ int Cpu::sys_write(uint32_t a0, uint32_t a1, uint32_t a2) {
 #define RISCV_O_DIRECTORY     0x200000
 #define RISCV_O_TMPFILE       0x800000
 
-
 int32_t Cpu::sys_open(uint32_t pathname, uint32_t flags, uint32_t mode) {
 	// printf("sys_open: pathname=0x%08x, flags=0x%08x, mode=0x%08x\n", pathname, flags, mode);
 	char fname[256];
@@ -204,7 +188,6 @@ int32_t Cpu::sys_open(uint32_t pathname, uint32_t flags, uint32_t mode) {
 			break;
 		}
 	}
-
 
 	if(flags & RISCV_O_CREAT) {
 		printf("O_CREAT = %04x\n", RISCV_O_CREAT);
@@ -280,7 +263,6 @@ int32_t Cpu::sys_close(uint32_t fd) {
 	return close(fd);
 }
 
-
 // int link(const char *oldpath, const char *newpath);
 int Cpu::sys_link(uint32_t a0, uint32_t a1) {
 	const char* oldpath = (const char*)memory->getPtr(a0);
@@ -295,8 +277,6 @@ int Cpu::sys_unlink(uint32_t a0) {
 	printf("Unlink: %s\n", pathname);
 	return ::unlink(pathname);
 }
-
-
 
 // See:
 //	https://interrupt.memfault.com/blog/boostrapping-libc-with-newlib
@@ -340,7 +320,12 @@ void Cpu::syscall(void) {
 				printf("    Exit Code = %d\n", a0);
 			}
 		}
-		exit(a0);
+		// exit(a0);
+		fflush(stdout);
+		fflush(stderr);
+		cpu->running = false;
+		cpu->stop = true;
+		return;
 
 	case SYS_read:
 		reg[10] = sys_read(a0, a1, a2);

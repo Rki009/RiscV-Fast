@@ -11,11 +11,15 @@ set "OPT=-march=rv32im -mabi=ilp32 -Wl,-Ttext=%TEXT_BASE% -Wl,-Tdata=%DATA_BASE%
 wsl /opt/riscv_11.1/bin/riscv64-unknown-elf-gcc %OPT% hello.c -o Hello.elf
 @if errorlevel 1 goto oops
 
+wsl /opt/riscv_11.1/bin/riscv64-unknown-elf-objdump -d -t -h Hello.elf | wsl expand >Hello.lst
+:: wsl /opt/riscv_11.1/bin/riscv64-unknown-elf-objdump -s -j .riscv.attributes Hello.elf
+:: wsl /opt/riscv_11.1/bin/riscv64-unknown-elf-objdump -s -j .comment Hello.elf
+
 :: Explicit Memory:
 :: wsl ../../RiscVFast --newlib -T%TEXT_BASE%:%TEXT_SIZE% -D%DATA_BASE%:%DATA_SIZE% Hello.elf
 
 :: Used default: -T0x00000000:0x00100000 -D0x40000000:0x00100000
-wsl ../../RiscVFast --newlib Hello.elf
+wsl ../../RiscVFast -q --newlib Hello.elf
 
 @pause
 @goto again

@@ -1,9 +1,6 @@
 #pragma once
 
-
-
 #define RISCV_RV32
-//- #define RV64
 
 #ifdef RISCV_RV32
 #define RV_XLEN	32
@@ -43,8 +40,6 @@
 #define MISA_Y		0x1000000	// Reserved
 #define MISA_Z		0x2000000	// Reserved
 
-
-//- `define CRS_MISA_EXT	26'h0000042	// Extensions = ???
 #ifdef OP_COMPRESSED
 #ifdef OP_MUL
 #define CRS_MISA_EXT	(MISA_C | MISA_I | MISA_M)	// RV32ICM
@@ -70,8 +65,6 @@
 #define OPT_MIMP_ID		0x00000012
 #define OPT_MHART_ID	0x00009001
 #define OPT_MISA		((CRS_MISA_MXL<<30) | CRS_MISA_EXT)
-
-
 
 // Machine Trap Setup
 #define RISCV_CSR_MSTATUS	0x300		// mstatus		Machine Status
@@ -109,7 +102,6 @@
 
 #define RISCV_MCAUSE_EBREAK	0x00000000	// EBREAK - Break Exception
 
-
 //	Interrupts
 #define RISCV_INTR_RSV_0	0		// Reserved
 #define RISCV_INTR_SSI		1		// Supervisor software interrupt
@@ -146,7 +138,6 @@
 #define RISCV_EXCP_RSV_14	14		// Reserved
 #define RISCV_EXCP_SPAGE	15		// Store/AMO page fault
 
-
 #define RISCV_MSTATUS_UIE 	0x00000001
 #define RISCV_MSTATUS_SIE 	0x00000002
 #define RISCV_MSTATUS_HIE 	0x00000004
@@ -168,7 +159,6 @@
 #define RISCV_MSTATUS_TSR 	0x00400000
 #define RISCV_MSTATUS32_SD	0x80000000
 
-
 #define RISCV_MIP_SSIP		0x00000002	// Supervisor software interrupt pending
 #define RISCV_MIP_MSIP		0x00000008	// Machine software interrupt pending
 #define RISCV_MIP_STIP		0x00000020	// Supervisor timer interrupt pending
@@ -182,8 +172,4 @@
 #define RISCV_MIE_MTIE		0x00000080	// Machine timer interrupt enable
 #define RISCV_MIE_SEIE		0x00000200	// Supervisor external interrupt enable
 #define RISCV_MIE_MEIE		0x00000800	// Machine external interrupt enable
-
-
-
-
 

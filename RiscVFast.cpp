@@ -29,7 +29,6 @@ int Release = 0;
 bool doSignature = false;
 bool quiet = true;				// run quite -- very minimal output
 
-
 FILE* lfp;		// log file
 // const char* elfFile = "C:\\Ubuntu\\RISC-V\\RISC-Vsim\\Test\\Test64";
 const char* elfFile = NULL;
@@ -46,17 +45,14 @@ Cpu* cpu = new Cpu;
 uint32_t	hostAddr = HOST_BASE;
 uint32_t	hostSize = HOST_SIZE;	// 64K
 
+uint32_t 	heap_len = HEAP_SIZE;
+
 void uartWrite(uint32_t value) {
 	uint8_t c = value;
 	// printf("Uart: '%c' (0x%02x)\n", isprint(c)?c:'.', c);
-#if 1
 	printf("%c", c);
 	// fprintf(stdout, "%c", c);
 	fflush(stdout);
-#else
-	fprintf(stderr, "%c", c);
-	fflush(stderr);
-#endif
 	static FILE* ofp;
 	if(ofp == NULL) {
 		ofp = fopen("stdout.txt", "w");
@@ -65,16 +61,6 @@ void uartWrite(uint32_t value) {
 	fflush(ofp);
 	return;
 };
-
-
-#if 0
-void ioWrite32(uint32_t addr, uint32_t value) {
-	if(addr == 0xfffffffc) {
-		uartWrite(value);
-	}
-}
-#endif
-
 
 // Host - Connection to a host machine ...
 //	Minimal is just a single port for 'Uart' data
@@ -89,12 +75,7 @@ uint32_t host(bool rw, uint32_t addr, uint32_t value) {
 			cpu->stop = true;
 			return 0;
 		}
-#if 0
-		int c = (uint8_t)value;
-		printf("Uart: '%c' [%02x]\n", isprint(c)?c:'.', c);
-#else
 		uartWrite(value);
-#endif
 		return 0;
 	}
 
@@ -108,8 +89,6 @@ uint32_t host(bool rw, uint32_t addr, uint32_t value) {
 
 	return 0;
 }
-
-
 
 const char* buildDate(void) {
 	static char buf[64];
@@ -157,7 +136,6 @@ const char* reg_list[32] {
 	"s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
 };
 
-
 void dump_reg(char* reg) {
 	if(reg != NULL && strcmp(reg, "all")!=0) {
 		int n;
@@ -183,8 +161,6 @@ void dump_reg(char* reg) {
 		}
 	}
 }
-
-
 
 //	Interactive Debug Mode
 //	======================
@@ -235,7 +211,6 @@ void debug_help(void) {
 	printf("  [option]					Option in above commands, if absent command just prints\n");
 }
 
-
 void show_current(void) {
 	char buf[256];
 	uint32_t pc = cpu->pc;
@@ -243,7 +218,6 @@ void show_current(void) {
 	disasm(pc, insn, buf);
 	printf("0x%08x: 0x%08x  %s\n", pc, insn, buf);
 }
-
 
 int debug_mode(void) {
 	int core_id = 0;	// default to core 0
@@ -342,27 +316,6 @@ int debug_mode(void) {
 			printf("Unknown command '%s'\n", args[0]);
 		}
 
-#if 0
-		else if(strcmp(buf, "s\n")==0 || strcmp(buf, "\n")==0) {
-			singleStep = true;
-		}
-		else if(strcmp(buf, "r\n")==0 || strcmp(buf, "run\n")==0) {
-			singleStep = false;
-		}
-		else if(strcmp(buf, "v\n")==0 || strcmp(buf, "+\n")==0 || strcmp(buf, "verbose\n")==0) {
-			++verbose;
-			printf("Verbose = %d\n", verbose);
-			cpu->dump32();
-			goto again;
-		}
-		else if(strcmp(buf, "-\n")==0) {
-			verbose = 0;
-			printf("Verbose = %d\n", verbose);
-			goto again;
-		}
-#endif
-
-
 	}
 }
 
@@ -377,6 +330,7 @@ const char* rn2[32] {
 	"s8", "s9", "sa", "sb",	//sa = s10, sb = s11
 	"t3", "t4", "t5", "t6"
 };
+
 void disasm_all(uint32_t start, uint32_t len) {
 	const char* outfile = "disasm_out.txt";
 	FILE* ofp = fopen(outfile, "w");
@@ -385,18 +339,13 @@ void disasm_all(uint32_t start, uint32_t len) {
 	for(uint32_t i=start; i < (start+len); i += 4) {
 		uint32_t insn = memory->read32(i);
 		disasm(i, insn, buf);
-#if 0
-		fprintf(ofp, "%08x: %08x %s\n", i, insn, buf);
-#else
 		Vliw vliw;
 		decode2vliw(i, insn, &vliw);
 		fprintf(ofp, "%08x: %08x [%2d %s,%s,%s,%08x] %s\n", i, insn,
 			vliw.opcode, rn2[vliw.rd], rn2[vliw.rs1], rn2[vliw.rs2], vliw.imm, buf);
-#endif
 	}
 	fclose(ofp);
 }
-
 
 void usage(void) {
 	printf("	-T addr:size    - .text base addresss\n");
@@ -412,7 +361,6 @@ void usage(void) {
 	printf("	--newlib	    - support newlib semi-hosting\n");
 	// printf("	--core	        - core I+D memory\n");
 };
-
 
 int main(int argc, char** argv) {
 	bool vflag = false;			// verbose
@@ -557,11 +505,6 @@ int main(int argc, char** argv) {
 			elfFile = argv[index];
 		}
 	}
-#if 0
-	if(argc >1) {
-		elfFile = argv[1];
-	}
-#endif
 
 	if(!quiet) {
 		printf("MySim - RV32/Rv64\n");
@@ -578,7 +521,6 @@ int main(int argc, char** argv) {
 		memory->insnMem->memBase = text_addr;
 		if(text_size != 0) {
 			memory->insnMem->memLen = text_size;
-			memory->insnMem->memMask = (text_size-1);
 		}
 		printf("Textbase = '%s' => 0x%08x:0x%08x\n", textBase, text_addr, text_size);
 	}
@@ -591,7 +533,6 @@ int main(int argc, char** argv) {
 		memory->dataMem->memBase = data_addr;
 		if(data_size != 0) {
 			memory->dataMem->memLen = data_size;
-			memory->dataMem->memMask = (data_size-1);
 		}
 		printf("Database = '%s' => 0x%08x:0x%08x\n", dataBase, data_addr, data_size);
 	}
@@ -601,20 +542,11 @@ int main(int argc, char** argv) {
 		hostAddr = getValue(hostBase);
 	}
 
-	if(uflag) {
-		memory->dataMem = memory->insnMem;
-		// memory->dataMem->memBase = memory->insnMem->memBase
-		// if(!quiet) {
-		printf("Unified memory!\n");
-		// }
-	}
-
 	if(!quiet) {
 		printf(".text: %08x %08x\n", memory->insnMem->memBase, memory->insnMem->memLen);
 		printf(".data: %08x %08x\n", memory->dataMem->memBase, memory->dataMem->memLen);
 		printf("Host:  %08x %08x\n", hostAddr, hostSize);
 	}
-
 
 	if(!quiet) {
 		printf("Elf file: %s\n", elfFile);
@@ -626,12 +558,13 @@ int main(int argc, char** argv) {
 		printf("Logfile: %s\n", logfile);
 	}
 
-
-	//-----------------------------------------------------------------
 	//		Read and Process EFL File
-	//-----------------------------------------------------------------
 	uint32_t entry = 0;
-	readElf(elfFile, memory->insnMem, memory->dataMem, &entry);
+	readElf(elfFile, memory, cpu, heap_len, &entry);
+
+	if(uflag) {
+		memory->dataMem->elf32   = memory->insnMem->elf32;
+	}
 
 	if(!quiet) {
 		printf(".text:\n");
@@ -645,27 +578,28 @@ int main(int argc, char** argv) {
 	}
 
 	// get Length of the .text section
-	uint32_t text_start = 0;
+	uint32_t text_start = -1;
 	uint32_t text_end = 0;
 	for(Elf32_Info* ip=memory->insnMem->elf32; ip != NULL; ip = ip->next) {
-		if(strcmp(ip->name, ".text")==0) {
+		uint32_t len = ip->addr + ip->size;
+		if(ip->addr < text_start) {
 			text_start = ip->addr;
-			text_end = ip->addr + ip->size;
-			break;
+		}
+		if(len > text_end) {
+			text_end = len;
 		}
 	}
 	if(!quiet) {
 		printf(".text: start = 0x%08x, end = 0x%08x\n", text_start, text_end);
 	}
 
-
 	// get total Length of the .data section
 	uint32_t data_start = -1;
 	uint32_t data_end = 0;
 	for(Elf32_Info* ip=memory->dataMem->elf32; ip != NULL; ip = ip->next) {
 		uint32_t len = ip->addr + ip->size;
-		if(len < data_start) {
-			data_start = len;
+		if(ip->addr < data_start) {
+			data_start = ip->addr;
 		}
 		if(len > data_end) {
 			data_end = len;
@@ -675,12 +609,9 @@ int main(int argc, char** argv) {
 		printf(".data: start = 0x%08x, end = 0x%08x\n", data_start, data_end);
 	}
 
-
-#if 1
 	if(dis_flag) {
 		disasm_all(text_start, text_end);
 	}
-#endif
 
 	if(c_flag) {
 		// compile to Warp output
@@ -688,15 +619,23 @@ int main(int argc, char** argv) {
 	}
 
 	if(!quiet) {
-		printf("Ready to run: %s @ %08x, %08x\n", elfFile, entry, data_end);
+		printf("Ready to run: %s @ %08x, data_end = %08x\n", elfFile, entry, data_end);
 	}
 
 	cpu->reset();
+
 	cpu->start(entry);
+	printf("Entry @ 0x%08x: 0x%08x\n", entry, cpu->fetch(entry));
+
 	cpu->edata(data_end);
+	// cpu->edata(memory->dataMem->memBase + memory->dataMem->memLen);
 
 	// set the stack to the top of data memory
-	cpu->setStack(memory->dataMem->memBase + memory->dataMem->memLen-16);
+	uint32_t sp_addr = memory->dataMem->memBase + memory->dataMem->memLen-16;
+	cpu->setStack(sp_addr);
+	if(!quiet) {
+		printf("Stack Pointer: %08x\n", sp_addr);
+	}
 
 	cpu->set_trace(trace_flag);
 
@@ -708,6 +647,8 @@ int main(int argc, char** argv) {
 		verbose = 0;
 		cpu->verbose = false;
 	}
+
+	// cpu->verbose = true;
 
 	// run ...
 	if(debug_flag) {
@@ -721,6 +662,7 @@ int main(int argc, char** argv) {
 		cpu->run(-1);
 	}
 
+	cpu->dump_vliw();
 
 	return 0;
 }

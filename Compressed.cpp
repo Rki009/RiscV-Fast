@@ -11,7 +11,6 @@
 #include "RiscVFast.h"
 #include "Cpu.h"
 
-
 Vliw* fastTable[0x10000];		// 64K fast VLIW access table
 
 // map 3-bit register to 5 bit value
@@ -140,9 +139,7 @@ int32_t mk_swsp(uint16_t code) {
 	return imm;
 };
 
-
 bool decodeCompressed(uint32_t addr, uint32_t code, Vliw* vlp) {
-#if 1
 	if(fastTable[code&0xffff] != NULL) {
 		// printf("Fast: addr=0x%08x, code=0x%04x\n", addr, (uint16_t)code);
 		Vliw* nvlp = fastTable[code&0xffff];
@@ -160,7 +157,6 @@ bool decodeCompressed(uint32_t addr, uint32_t code, Vliw* vlp) {
 		}
 		return true;
 	}
-#endif
 
 	if(DEBUG || cpu->verbose) {
 		printf("Comp32: addr=0x%08x, code=0x%04x\n", addr, (uint16_t)code);
@@ -218,17 +214,6 @@ bool decodeCompressed(uint32_t addr, uint32_t code, Vliw* vlp) {
 		vlp->imm = mk_sw(code);
 		break;
 
-#if 0
-	// sd rs2',offset(rs1')
-	case VLIW_C_FSW:			// RV32
-		vlp->opcode = VLIW_SD;
-		vlp->rd = 0;
-		vlp->rs1 = r3b7;
-		vlp->rs2 = r3b2;
-		vlp->imm = mk_sd(code);
-		break;
-#endif
-
 	// sw rs2,offset(sp)
 	case VLIW_C_SWSP:
 		vlp->opcode = VLIW_SW;
@@ -256,16 +241,6 @@ bool decodeCompressed(uint32_t addr, uint32_t code, Vliw* vlp) {
 		vlp->imm = mk_beq(code);
 		break;
 
-#if 0
-	// add rd,x0,rs2
-	case VLIW_C_MV:
-		vlp->opcode = VLIW_ADD;
-		vlp->rd = (code>>7)&0x1f;
-		vlp->rs1 = 0;
-		vlp->rs2 = (code>>2)&0x1f;
-		vlp->imm = 0;
-		break;
-#else
 	// addi rd,rs1,0, alternate move
 	case VLIW_C_MV:
 		vlp->opcode = VLIW_ADDI;
@@ -274,7 +249,6 @@ bool decodeCompressed(uint32_t addr, uint32_t code, Vliw* vlp) {
 		vlp->rs2 = 0;
 		vlp->imm = 0;
 		break;
-#endif
 
 	// add rd,rd,rs2
 	case VLIW_C_ADD:
@@ -513,7 +487,7 @@ bool decodeCompressed(uint32_t addr, uint32_t code, Vliw* vlp) {
 
 	// vlp->dump();
 	// cpu->dump32();
-	if (DEBUG) {
+	if(DEBUG) {
 		printf("  vlp: %d, %d, %d, %d, %08x\n", vlp->opcode,
 			vlp->rd, vlp->rs1, vlp->rs2, vlp->imm);
 	}

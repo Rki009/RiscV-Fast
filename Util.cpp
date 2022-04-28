@@ -7,7 +7,6 @@
 #include "RiscVFast.h"
 #include "Cpu.h"
 
-
 // format uint64_t into hex string
 //	works for both long and long long
 const char* hex64(uint64_t value) {
@@ -34,8 +33,6 @@ const char* dec64(uint64_t value) {
 	}
 	return buf;
 }
-
-
 
 /*
  * Put out a fatal error.
@@ -98,7 +95,6 @@ void _trace(const char* file, const char* func, int line, const char* fmt, ...) 
 	va_end(args);
 }
 
-
 #ifdef __WIN32__
 #include <windows.h>
 void Sleep(int waitTime) {
@@ -116,36 +112,5 @@ void Sleep(int waitTime) {
 inline void Sleep(int ms) {
 	usleep(ms*1000);
 }
-#endif
-
-#if 0
-void initMemory(char* filename) {
-	FILE* fp = fopen(filename, "rb");
-	if(fp == NULL) {
-		printf("Unable to open %s\n", filename);
-		return;
-	}
-	unsigned n = fread(insnMem, 1, sizeof(insnMem), fp);
-	printf("Loaded %s, %04x bytes\n", filename, n);
-	// fread(dataMem, 1, sizeof(dataMem), fp);
-
-	if(fp) {
-		fclose(fp);
-	}
-};
-
-void initData(char* filename) {
-	FILE* fp = fopen(filename, "rb");
-	if(fp == NULL) {
-		printf("Unable to open %s\n", filename);
-		return;
-	}
-	// fread(insnMem, 1, sizeof(insnMem), fp);
-	fread(dataMem, 1, sizeof(dataMem), fp);
-
-	if(fp) {
-		fclose(fp);
-	}
-};
 #endif
 

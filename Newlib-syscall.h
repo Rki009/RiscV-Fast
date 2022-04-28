@@ -54,7 +54,6 @@
 #define SYS_time 1062
 #define SYS_getmainvars 2011
 
-
 /*
 // Forward prototypes.
 int	_system		(const char *);

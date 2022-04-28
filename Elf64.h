@@ -30,31 +30,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 extern "C" {
 #endif
 
-#if 0
-#include <stdint.h>
-typedef uint16_t Elf32_Half;
-typedef uint16_t Elf64_Half;
-
-typedef uint32_t Elf32_Word;
-typedef	int32_t  Elf32_Sword;
-typedef uint32_t Elf64_Word;
-typedef	int32_t  Elf64_Sword;
-
-typedef uint64_t Elf32_Xword;
-typedef	int64_t  Elf32_Sxword;
-typedef uint64_t Elf64_Xword;
-typedef	int64_t  Elf64_Sxword;
-
-typedef uint32_t Elf32_Addr;
-typedef uint64_t Elf64_Addr;
-
-typedef uint32_t Elf32_Off;
-typedef uint64_t Elf64_Off;
-
-typedef uint16_t Elf32_Section;
-typedef uint16_t Elf64_Section;
-#endif
-
 typedef unsigned short	Elf32_Half;
 typedef unsigned short	Elf64_Half;
 
@@ -128,7 +103,6 @@ typedef struct {
 #define EI_MAG3		3
 #define ELFMAG3		'F'
 
-
 #define	ELFMAG		"\177ELF"
 #define	SELFMAG		4
 
@@ -145,7 +119,6 @@ typedef struct {
 #define ELFDATANUM	3
 
 #define EI_VERSION	6
-
 
 #define EI_OSABI	7
 #define ELFOSABI_NONE		0
@@ -168,8 +141,6 @@ typedef struct {
 
 #define EI_PAD		9
 
-
-
 #define ET_NONE		0
 #define ET_REL		1
 #define ET_EXEC		2
@@ -180,8 +151,6 @@ typedef struct {
 #define ET_HIOS		0xfeff
 #define ET_LOPROC	0xff00
 #define ET_HIPROC	0xffff
-
-
 
 #define EM_NONE		 0
 #define EM_M32		 1
@@ -396,8 +365,6 @@ typedef struct {
 	Elf64_Xword	sh_entsize;
 } Elf64_Shdr;
 
-
-
 #define SHN_UNDEF	0
 #define SHN_LORESERVE	0xff00
 #define SHN_LOPROC	0xff00
@@ -413,10 +380,8 @@ typedef struct {
 #define SHN_XINDEX	0xffff
 #define SHN_HIRESERVE	0xffff
 
-
-
 #define SHT_NULL	  0
-#define SHT_PROGBITS	  1
+#define SHT_PROGBITS  1
 #define SHT_SYMTAB	  2
 #define SHT_STRTAB	  3
 #define SHT_RELA	  4
@@ -487,7 +452,6 @@ typedef struct {
 #define ELFCOMPRESS_HIOS	0x6fffffff
 #define ELFCOMPRESS_LOPROC	0x70000000
 #define ELFCOMPRESS_HIPROC	0x7fffffff
-
 
 #define GRP_COMDAT	0x1
 
@@ -574,9 +538,6 @@ typedef struct {
 #define STV_HIDDEN	2
 #define STV_PROTECTED	3
 
-
-
-
 typedef struct {
 	Elf32_Addr	r_offset;
 	Elf32_Word	r_info;
@@ -586,8 +547,6 @@ typedef struct {
 	Elf64_Addr	r_offset;
 	Elf64_Xword	r_info;
 } Elf64_Rel;
-
-
 
 typedef struct {
 	Elf32_Addr	r_offset;
@@ -601,8 +560,6 @@ typedef struct {
 	Elf64_Sxword	r_addend;
 } Elf64_Rela;
 
-
-
 #define ELF32_R_SYM(val)		((val) >> 8)
 #define ELF32_R_TYPE(val)		((val) & 0xff)
 #define ELF32_R_INFO(sym, type)		(((sym) << 8) + ((type) & 0xff))
@@ -610,8 +567,6 @@ typedef struct {
 #define ELF64_R_SYM(i)			((i) >> 32)
 #define ELF64_R_TYPE(i)			((i) & 0xffffffff)
 #define ELF64_R_INFO(sym,type)		((((Elf64_Xword) (sym)) << 32) + (type))
-
-
 
 typedef struct {
 	Elf32_Word	p_type;
@@ -635,8 +590,6 @@ typedef struct {
 	Elf64_Xword	p_align;
 } Elf64_Phdr;
 
-
-
 #define	PT_NULL		0
 #define PT_LOAD		1
 #define PT_DYNAMIC	2
@@ -658,17 +611,13 @@ typedef struct {
 #define PT_LOPROC	0x70000000
 #define PT_HIPROC	0x7fffffff
 
-
 #define PN_XNUM 0xffff
-
 
 #define PF_X		(1 << 0)
 #define PF_W		(1 << 1)
 #define PF_R		(1 << 2)
 #define PF_MASKOS	0x0ff00000
 #define PF_MASKPROC	0xf0000000
-
-
 
 #define NT_PRSTATUS	1
 #define NT_FPREGSET	2
@@ -715,9 +664,6 @@ typedef struct {
 #define NT_METAG_TLS	0x502
 #define NT_VERSION	1
 
-
-
-
 typedef struct {
 	Elf32_Sword d_tag;
 	union {
@@ -733,8 +679,6 @@ typedef struct {
 		Elf64_Addr d_ptr;
 	} d_un;
 } Elf64_Dyn;
-
-
 
 #define DT_NULL		0
 #define DT_NEEDED	1
@@ -810,13 +754,10 @@ typedef struct {
 #define DT_ADDRTAGIDX(tag)	(DT_ADDRRNGHI - (tag))
 #define DT_ADDRNUM 11
 
-
-
 #define DT_VERSYM	0x6ffffff0
 
 #define DT_RELACOUNT	0x6ffffff9
 #define DT_RELCOUNT	0x6ffffffa
-
 
 #define DT_FLAGS_1	0x6ffffffb
 #define	DT_VERDEF	0x6ffffffc
@@ -828,21 +769,16 @@ typedef struct {
 #define DT_VERSIONTAGIDX(tag)	(DT_VERNEEDNUM - (tag))
 #define DT_VERSIONTAGNUM 16
 
-
-
 #define DT_AUXILIARY    0x7ffffffd
 #define DT_FILTER       0x7fffffff
 #define DT_EXTRATAGIDX(tag)	((Elf32_Word)-((Elf32_Sword) (tag) <<1>>1)-1)
 #define DT_EXTRANUM	3
-
 
 #define DF_ORIGIN	0x00000001
 #define DF_SYMBOLIC	0x00000002
 #define DF_TEXTREL	0x00000004
 #define DF_BIND_NOW	0x00000008
 #define DF_STATIC_TLS	0x00000010
-
-
 
 #define DF_1_NOW	0x00000001
 #define DF_1_GLOBAL	0x00000002
@@ -874,12 +810,8 @@ typedef struct {
 #define DTF_1_PARINIT	0x00000001
 #define DTF_1_CONFEXP	0x00000002
 
-
 #define DF_P1_LAZYLOAD	0x00000001
 #define DF_P1_GROUPPERM	0x00000002
-
-
-
 
 typedef struct {
 	Elf32_Half	vd_version;
@@ -901,23 +833,17 @@ typedef struct {
 	Elf64_Word	vd_next;
 } Elf64_Verdef;
 
-
-
 #define VER_DEF_NONE	0
 #define VER_DEF_CURRENT	1
 #define VER_DEF_NUM	2
 
-
 #define VER_FLG_BASE	0x1
 #define VER_FLG_WEAK	0x2
-
 
 #define	VER_NDX_LOCAL		0
 #define	VER_NDX_GLOBAL		1
 #define	VER_NDX_LORESERVE	0xff00
 #define	VER_NDX_ELIMINATE	0xff01
-
-
 
 typedef struct {
 	Elf32_Word	vda_name;
@@ -928,9 +854,6 @@ typedef struct {
 	Elf64_Word	vda_name;
 	Elf64_Word	vda_next;
 } Elf64_Verdaux;
-
-
-
 
 typedef struct {
 	Elf32_Half	vn_version;
@@ -948,13 +871,9 @@ typedef struct {
 	Elf64_Word	vn_next;
 } Elf64_Verneed;
 
-
-
 #define VER_NEED_NONE	 0
 #define VER_NEED_CURRENT 1
 #define VER_NEED_NUM	 2
-
-
 
 typedef struct {
 	Elf32_Word	vna_hash;
@@ -972,11 +891,7 @@ typedef struct {
 	Elf64_Word	vna_next;
 } Elf64_Vernaux;
 
-
-
 #define VER_FLG_WEAK	0x2
-
-
 
 typedef struct {
 	uint32_t a_type;
@@ -991,8 +906,6 @@ typedef struct {
 		uint64_t a_val;
 	} a_un;
 } Elf64_auxv_t;
-
-
 
 #define AT_NULL		0
 #define AT_IGNORE	1
@@ -1011,21 +924,14 @@ typedef struct {
 #define AT_EGID		14
 #define AT_CLKTCK	17
 
-
 #define AT_PLATFORM	15
 #define AT_HWCAP	16
 
-
-
-
 #define AT_FPUCW	18
-
 
 #define AT_DCACHEBSIZE	19
 #define AT_ICACHEBSIZE	20
 #define AT_UCACHEBSIZE	21
-
-
 
 #define AT_IGNOREPPC	22
 
@@ -1039,20 +945,13 @@ typedef struct {
 
 #define AT_EXECFN	31
 
-
-
 #define AT_SYSINFO	32
 #define AT_SYSINFO_EHDR	33
-
-
 
 #define AT_L1I_CACHESHAPE	34
 #define AT_L1D_CACHESHAPE	35
 #define AT_L2_CACHESHAPE	36
 #define AT_L3_CACHESHAPE	37
-
-
-
 
 typedef struct {
 	Elf32_Word n_namesz;
@@ -1066,25 +965,14 @@ typedef struct {
 	Elf64_Word n_type;
 } Elf64_Nhdr;
 
-
-
-
 #define ELF_NOTE_SOLARIS	"SUNW Solaris"
-
 
 #define ELF_NOTE_GNU		"GNU"
 
-
-
-
-
 #define ELF_NOTE_PAGESIZE_HINT	1
-
 
 #define NT_GNU_ABI_TAG	1
 #define ELF_NOTE_ABI	NT_GNU_ABI_TAG
-
-
 
 #define ELF_NOTE_OS_LINUX	0
 #define ELF_NOTE_OS_GNU		1
@@ -1093,8 +981,6 @@ typedef struct {
 
 #define NT_GNU_BUILD_ID	3
 #define NT_GNU_GOLD_VERSION	4
-
-
 
 typedef struct {
 	Elf32_Xword m_value;
@@ -1111,7 +997,6 @@ typedef struct {
 	Elf64_Half m_repeat;
 	Elf64_Half m_stride;
 } Elf64_Move;
-
 
 #define ELF32_M_SYM(info)	((info) >> 8)
 #define ELF32_M_SIZE(info)	((unsigned char) (info))
@@ -1192,13 +1077,7 @@ typedef struct {
 #define R_386_GOT32X	   43
 #define R_386_NUM	   44
 
-
-
-
-
 #define STT_SPARC_REGISTER	13
-
-
 
 #define EF_SPARCV9_MM		3
 #define EF_SPARCV9_TSO		0
@@ -1210,8 +1089,6 @@ typedef struct {
 #define EF_SPARC_SUN_US1	0x000200
 #define EF_SPARC_HAL_R1		0x000400
 #define EF_SPARC_SUN_US3	0x000800
-
-
 
 #define R_SPARC_NONE		0
 #define R_SPARC_8		1
@@ -1237,8 +1114,6 @@ typedef struct {
 #define R_SPARC_JMP_SLOT	21
 #define R_SPARC_RELATIVE	22
 #define R_SPARC_UA32		23
-
-
 
 #define R_SPARC_PLT32		24
 #define R_SPARC_HIPLT22		25
@@ -1310,11 +1185,8 @@ typedef struct {
 
 #define R_SPARC_NUM		253
 
-
-
 #define DT_SPARC_REGISTER 0x70000001
 #define DT_SPARC_NUM	2
-
 
 #define EF_MIPS_NOREORDER   1
 #define EF_MIPS_PIC	    2
@@ -1327,8 +1199,6 @@ typedef struct {
 #define EF_MIPS_NAN2008     1024
 #define EF_MIPS_ARCH	    0xf0000000
 
-
-
 #define EF_MIPS_ARCH_1	    0x00000000
 #define EF_MIPS_ARCH_2	    0x10000000
 #define EF_MIPS_ARCH_3	    0x20000000
@@ -1339,7 +1209,6 @@ typedef struct {
 #define EF_MIPS_ARCH_32R2   0x70000000
 #define EF_MIPS_ARCH_64R2   0x80000000
 
-
 #define E_MIPS_ARCH_1	  0x00000000
 #define E_MIPS_ARCH_2	  0x10000000
 #define E_MIPS_ARCH_3	  0x20000000
@@ -1348,15 +1217,11 @@ typedef struct {
 #define E_MIPS_ARCH_32	  0x50000000
 #define E_MIPS_ARCH_64	  0x60000000
 
-
-
 #define SHN_MIPS_ACOMMON    0xff00
 #define SHN_MIPS_TEXT	    0xff01
 #define SHN_MIPS_DATA	    0xff02
 #define SHN_MIPS_SCOMMON    0xff03
 #define SHN_MIPS_SUNDEFINED 0xff04
-
-
 
 #define SHT_MIPS_LIBLIST       0x70000000
 #define SHT_MIPS_MSYM	       0x70000001
@@ -1398,8 +1263,6 @@ typedef struct {
 #define SHT_MIPS_XLATE_OLD     0x70000028
 #define SHT_MIPS_PDR_EXCEPTION 0x70000029
 
-
-
 #define SHF_MIPS_GPREL	 0x10000000
 #define SHF_MIPS_MERGE	 0x20000000
 #define SHF_MIPS_ADDR	 0x40000000
@@ -1409,10 +1272,6 @@ typedef struct {
 #define SHF_MIPS_NAMES	 0x02000000
 #define SHF_MIPS_NODUPE	 0x01000000
 
-
-
-
-
 #define STO_MIPS_DEFAULT		0x0
 #define STO_MIPS_INTERNAL		0x1
 #define STO_MIPS_HIDDEN			0x2
@@ -1420,10 +1279,7 @@ typedef struct {
 #define STO_MIPS_PLT			0x8
 #define STO_MIPS_SC_ALIGN_UNUSED	0xff
 
-
 #define STB_MIPS_SPLIT_COMMON		13
-
-
 
 typedef union {
 	struct {
@@ -1436,15 +1292,11 @@ typedef union {
 	} gt_entry;
 } Elf32_gptab;
 
-
-
 typedef struct {
 	Elf32_Word	ri_gprmask;
 	Elf32_Word	ri_cprmask[4];
 	Elf32_Sword	ri_gp_value;
 } Elf32_RegInfo;
-
-
 
 typedef struct {
 	unsigned char kind;
@@ -1455,8 +1307,6 @@ typedef struct {
 	Elf32_Word info;
 } Elf_Options;
 
-
-
 #define ODK_NULL	0
 #define ODK_REGINFO	1
 #define ODK_EXCEPTIONS	2
@@ -1466,8 +1316,6 @@ typedef struct {
 #define ODK_TAGS	6
 #define ODK_HWAND	7
 #define ODK_HWOR	8
-
-
 
 #define OEX_FPU_MIN	0x1f
 #define OEX_FPU_MAX	0x1f00
@@ -1483,8 +1331,6 @@ typedef struct {
 #define OEX_FPU_UFLO	0x02
 #define OEX_FPU_INEX	0x01
 
-
-
 #define OHW_R4KEOP	0x1
 #define OHW_R8KPFETCH	0x2
 #define OHW_R5KEOP	0x4
@@ -1494,19 +1340,13 @@ typedef struct {
 #define OPAD_POSTFIX	0x2
 #define OPAD_SYMBOL	0x4
 
-
-
 typedef struct {
 	Elf32_Word hwp_flags1;
 	Elf32_Word hwp_flags2;
 } Elf_Options_Hw;
 
-
-
 #define OHWA0_R4KEOP_CHECKED	0x00000001
 #define OHWA1_R4KEOP_CLEAN	0x00000002
-
-
 
 #define R_MIPS_NONE		0
 #define R_MIPS_16		1
@@ -1563,18 +1403,12 @@ typedef struct {
 
 #define R_MIPS_NUM		128
 
-
-
 #define PT_MIPS_REGINFO	0x70000000
 #define PT_MIPS_RTPROC  0x70000001
 #define PT_MIPS_OPTIONS 0x70000002
 #define PT_MIPS_ABIFLAGS 0x70000003
 
-
-
 #define PF_MIPS_LOCAL	0x10000000
-
-
 
 #define DT_MIPS_RLD_VERSION  0x70000001
 #define DT_MIPS_TIME_STAMP   0x70000002
@@ -1635,8 +1469,6 @@ typedef struct {
 #define DT_MIPS_RLD_MAP_REL  0x70000035
 #define DT_MIPS_NUM	     0x36
 
-
-
 #define RHF_NONE		   0
 #define RHF_QUICKSTART		   (1 << 0)
 #define RHF_NOTPOT		   (1 << 1)
@@ -1654,8 +1486,6 @@ typedef struct {
 #define RHF_NO_UNRES_UNDEF	   (1 << 13)
 #define RHF_RLD_ORDER_SAFE	   (1 << 14)
 
-
-
 typedef struct {
 	Elf32_Word l_name;
 	Elf32_Word l_time_stamp;
@@ -1672,9 +1502,6 @@ typedef struct {
 	Elf64_Word l_flags;
 } Elf64_Lib;
 
-
-
-
 #define LL_NONE		  0
 #define LL_EXACT_MATCH	  (1 << 0)
 #define LL_IGNORE_INT_VER (1 << 1)
@@ -1682,8 +1509,6 @@ typedef struct {
 #define LL_EXPORTS	  (1 << 3)
 #define LL_DELAY_LOAD	  (1 << 4)
 #define LL_DELTA	  (1 << 5)
-
-
 
 typedef Elf32_Addr Elf32_Conflict;
 
@@ -1754,9 +1579,6 @@ enum {
 	Val_GNU_MIPS_ABI_FP_MAX = 7
 };
 
-
-
-
 #define EF_PARISC_TRAPNIL	0x00010000
 #define EF_PARISC_EXT		0x00020000
 #define EF_PARISC_LSB		0x00040000
@@ -1766,38 +1588,26 @@ enum {
 #define EF_PARISC_LAZYSWAP	0x00400000
 #define EF_PARISC_ARCH		0x0000ffff
 
-
-
 #define EFA_PARISC_1_0		    0x020b
 #define EFA_PARISC_1_1		    0x0210
 #define EFA_PARISC_2_0		    0x0214
-
-
 
 #define SHN_PARISC_ANSI_COMMON	0xff00
 
 #define SHN_PARISC_HUGE_COMMON	0xff01
 
-
-
 #define SHT_PARISC_EXT		0x70000000
 #define SHT_PARISC_UNWIND	0x70000001
 #define SHT_PARISC_DOC		0x70000002
-
-
 
 #define SHF_PARISC_SHORT	0x20000000
 #define SHF_PARISC_HUGE		0x40000000
 #define SHF_PARISC_SBP		0x80000000
 
-
-
 #define STT_PARISC_MILLICODE	13
 
 #define STT_HP_OPAQUE		(STT_LOOS + 0x1)
 #define STT_HP_STUB		(STT_LOOS + 0x2)
-
-
 
 #define R_PARISC_NONE		0
 #define R_PARISC_DIR32		1
@@ -1910,8 +1720,6 @@ enum {
 #define R_PARISC_TLS_TPREL64	R_PARISC_TPREL64
 #define R_PARISC_HIRESERVE	255
 
-
-
 #define PT_HP_TLS		(PT_LOOS + 0x0)
 #define PT_HP_CORE_NONE		(PT_LOOS + 0x1)
 #define PT_HP_CORE_VERSION	(PT_LOOS + 0x2)
@@ -1931,8 +1739,6 @@ enum {
 #define PT_PARISC_ARCHEXT	0x70000000
 #define PT_PARISC_UNWIND	0x70000001
 
-
-
 #define PF_PARISC_SBP		0x08000000
 
 #define PF_HP_PAGE_SIZE		0x00100000
@@ -1943,29 +1749,16 @@ enum {
 #define PF_HP_LAZYSWAP		0x04000000
 #define PF_HP_SBP		0x08000000
 
-
-
-
-
-
 #define EF_ALPHA_32BIT		1
 #define EF_ALPHA_CANRELAX	2
-
-
-
 
 #define SHT_ALPHA_DEBUG		0x70000001
 #define SHT_ALPHA_REGINFO	0x70000002
 
-
-
 #define SHF_ALPHA_GPREL		0x10000000
-
 
 #define STO_ALPHA_NOPV		0x80
 #define STO_ALPHA_STD_GPLOAD	0x88
-
-
 
 #define R_ALPHA_NONE		0
 #define R_ALPHA_REFLONG		1
@@ -2003,7 +1796,6 @@ enum {
 
 #define R_ALPHA_NUM		46
 
-
 #define LITUSE_ALPHA_ADDR	0
 #define LITUSE_ALPHA_BASE	1
 #define LITUSE_ALPHA_BYTOFF	2
@@ -2011,20 +1803,13 @@ enum {
 #define LITUSE_ALPHA_TLS_GD	4
 #define LITUSE_ALPHA_TLS_LDM	5
 
-
 #define DT_ALPHA_PLTRO		(DT_LOPROC + 0)
 #define DT_ALPHA_NUM		1
 
-
-
-
 #define EF_PPC_EMB		0x80000000
-
 
 #define EF_PPC_RELOCATABLE	0x00010000
 #define EF_PPC_RELOCATABLE_LIB	0x00008000
-
-
 
 #define R_PPC_NONE		0
 #define R_PPC_ADDR32		1
@@ -2064,7 +1849,6 @@ enum {
 #define R_PPC_SECTOFF_HI	35
 #define R_PPC_SECTOFF_HA	36
 
-
 #define R_PPC_TLS		67
 #define R_PPC_DTPMOD32		68
 #define R_PPC_TPREL16		69
@@ -2096,7 +1880,6 @@ enum {
 #define R_PPC_TLSGD		95
 #define R_PPC_TLSLD		96
 
-
 #define R_PPC_EMB_NADDR32	101
 #define R_PPC_EMB_NADDR16	102
 #define R_PPC_EMB_NADDR16_LO	103
@@ -2114,7 +1897,6 @@ enum {
 #define R_PPC_EMB_BIT_FLD	115
 #define R_PPC_EMB_RELSDA	116
 
-
 #define R_PPC_DIAB_SDA21_LO	180
 #define R_PPC_DIAB_SDA21_HI	181
 #define R_PPC_DIAB_SDA21_HA	182
@@ -2122,26 +1904,20 @@ enum {
 #define R_PPC_DIAB_RELSDA_HI	184
 #define R_PPC_DIAB_RELSDA_HA	185
 
-
 #define R_PPC_IRELATIVE		248
-
 
 #define R_PPC_REL16		249
 #define R_PPC_REL16_LO		250
 #define R_PPC_REL16_HI		251
 #define R_PPC_REL16_HA		252
 
-
-
 #define R_PPC_TOC16		255
-
 
 #define DT_PPC_GOT		(DT_LOPROC + 0)
 #define DT_PPC_OPT		(DT_LOPROC + 1)
 #define DT_PPC_NUM		2
 
 #define PPC_OPT_TLS		1
-
 
 #define R_PPC64_NONE		R_PPC_NONE
 #define R_PPC64_ADDR32		R_PPC_ADDR32
@@ -2212,7 +1988,6 @@ enum {
 #define R_PPC64_PLTGOT16_DS	65
 #define R_PPC64_PLTGOT16_LO_DS	66
 
-
 #define R_PPC64_TLS		67
 #define R_PPC64_DTPMOD64	68
 #define R_PPC64_TPREL16		69
@@ -2263,7 +2038,6 @@ enum {
 #define R_PPC64_DTPREL16_HIGH	114
 #define R_PPC64_DTPREL16_HIGHA	115
 
-
 #define R_PPC64_JMP_IREL	247
 #define R_PPC64_IRELATIVE	248
 #define R_PPC64_REL16		249
@@ -2286,7 +2060,6 @@ enum {
 #define STO_PPC64_LOCAL_MASK	0xe0
 #define PPC64_LOCAL_ENTRY_OFFSET(x) (1 << (((x)&0xe0)>>5) & 0xfc)
 
-
 #define EF_ARM_RELEXEC		0x01
 #define EF_ARM_HASENTRY		0x02
 #define EF_ARM_INTERWORK	0x04
@@ -2303,12 +2076,10 @@ enum {
 #define EF_ARM_ABI_FLOAT_SOFT	0x200
 #define EF_ARM_ABI_FLOAT_HARD	0x400
 
-
 #define EF_ARM_SYMSARESORTED	0x04
 #define EF_ARM_DYNSYMSUSESEGIDX	0x08
 #define EF_ARM_MAPSYMSFIRST	0x10
 #define EF_ARM_EABIMASK		0XFF000000
-
 
 #define EF_ARM_BE8	    0x00800000
 #define EF_ARM_LE8	    0x00400000
@@ -2321,24 +2092,18 @@ enum {
 #define EF_ARM_EABI_VER4	0x04000000
 #define EF_ARM_EABI_VER5	0x05000000
 
-
 #define STT_ARM_TFUNC		STT_LOPROC
 #define STT_ARM_16BIT		STT_HIPROC
 
-
 #define SHF_ARM_ENTRYSECT	0x10000000
 #define SHF_ARM_COMDEF		0x80000000
-
-
 
 #define PF_ARM_SB		0x10000000
 
 #define PF_ARM_PI		0x20000000
 #define PF_ARM_ABS		0x40000000
 
-
 #define PT_ARM_EXIDX		(PT_LOPROC + 1)
-
 
 #define SHT_ARM_EXIDX		(SHT_LOPROC + 1)
 #define SHT_ARM_PREEMPTMAP	(SHT_LOPROC + 2)
@@ -2480,7 +2245,6 @@ enum {
 #define R_AARCH64_TLS_TPREL64  1030
 #define R_AARCH64_TLSDESC      1031
 
-
 #define R_ARM_NONE		0
 #define R_ARM_PC24		1
 #define R_ARM_ABS32		2
@@ -2613,13 +2377,9 @@ enum {
 
 #define R_ARM_NUM		256
 
-
-
-
 #define EF_IA_64_MASKOS		0x0000000f
 #define EF_IA_64_ABI64		0x00000010
 #define EF_IA_64_ARCH		0xff000000
-
 
 #define PT_IA_64_ARCHEXT	(PT_LOPROC + 0)
 #define PT_IA_64_UNWIND		(PT_LOPROC + 1)
@@ -2627,21 +2387,16 @@ enum {
 #define PT_IA_64_HP_HSL_ANOT	(PT_LOOS + 0x13)
 #define PT_IA_64_HP_STACK	(PT_LOOS + 0x14)
 
-
 #define PF_IA_64_NORECOV	0x80000000
-
 
 #define SHT_IA_64_EXT		(SHT_LOPROC + 0)
 #define SHT_IA_64_UNWIND	(SHT_LOPROC + 1)
 
-
 #define SHF_IA_64_SHORT		0x10000000
 #define SHF_IA_64_NORECOV	0x20000000
 
-
 #define DT_IA_64_PLT_RESERVE	(DT_LOPROC + 0)
 #define DT_IA_64_NUM		1
-
 
 #define R_IA64_NONE		0x00
 #define R_IA64_IMM14		0x21
@@ -2725,7 +2480,6 @@ enum {
 #define R_IA64_DTPREL64LSB	0xb7
 #define R_IA64_LTOFF_DTPREL22	0xba
 
-
 #define EF_SH_MACH_MASK		0x1f
 #define EF_SH_UNKNOWN		0x0
 #define EF_SH1			0x1
@@ -2796,8 +2550,6 @@ enum {
 #define	R_SH_FUNCDESC_VALUE	208
 
 #define	R_SH_NUM		256
-
-
 
 #define R_390_NONE		0
 #define R_390_8			1
@@ -2878,10 +2630,7 @@ enum {
 #define R_390_GOTPLT20		59
 #define R_390_TLS_GOTIE20	60
 
-
 #define R_390_NUM		61
-
-
 
 #define R_CRIS_NONE		0
 #define R_CRIS_8		1
@@ -2905,8 +2654,6 @@ enum {
 #define R_CRIS_32_PLT_PCREL	19
 
 #define R_CRIS_NUM		20
-
-
 
 #define R_X86_64_NONE		0
 #define R_X86_64_64		1
@@ -2957,8 +2704,6 @@ enum {
 #define R_X86_64_REX_GOTPCRELX	42
 #define R_X86_64_NUM		43
 
-
-
 #define R_MN10300_NONE		0
 #define R_MN10300_32		1
 #define R_MN10300_16		2
@@ -2985,8 +2730,6 @@ enum {
 #define R_MN10300_RELATIVE	23
 
 #define R_MN10300_NUM		24
-
-
 
 #define R_M32R_NONE		0
 #define R_M32R_16		1
@@ -3164,6 +2907,5 @@ enum {
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif

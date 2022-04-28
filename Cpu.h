@@ -48,7 +48,6 @@ public:
 	};
 };
 
-
 #define PC_MASK 0xfffffffe
 
 #if RV64
@@ -59,7 +58,6 @@ typedef uint64_t addr_t;
 typedef	uint32_t data_t;
 typedef	uint32_t addr_t;
 #endif
-
 
 class Cpu {
 public:
@@ -87,7 +85,6 @@ public:
 	bool irq;			// request for interrupt
 	bool trace;
 
-
 	// CSR Registers
 	// Machine Trap Setup
 	uint32_t mstatus;	// mstatus		Machine Status
@@ -101,7 +98,6 @@ public:
 	uint32_t mip;		// mip			Machine Interrupt Pending
 	uint32_t mcause; 	// mcause		Machine Exception Cause
 
-	//-----------------------------------------------------------------
 	Cpu(void) {
 		memset(this, 0, sizeof(*this));
 	};
@@ -111,6 +107,7 @@ public:
 		breakpoint = -1;	// not a valid pc
 		// brk_addr = 0;
 		irq = false;
+		verbose = 0;
 	};
 
 	// program start/entry address
@@ -125,12 +122,10 @@ public:
 		heap = 0;
 		endOfData = edata;
 	};
-	
+
 	void set_trace(bool t) {
 		trace = t;
 	};
-	
-
 
 	bool run(uint64_t n);
 	bool execute(Vliw* vlp);
@@ -146,25 +141,16 @@ public:
 	};
 
 	bool checkPc(unsigned target) {
-		target &= PC_MASK;
-#if ROM_BASE != 0x00000000
-		if(target < (ROM_BASE&PC_MASK) || target >= ((ROM_BASE+ROM_SIZE)&PC_MASK)) {
-			return false;
-		}
-#else
-		// ROM_BASE == 0x00000000
-		if(target >= ((ROM_BASE+ROM_SIZE)&PC_MASK)) {
-			return false;
-		}
-#endif
+		if ((pc-memory->insnMem->memBase) >= memory->insnMem->memLen) return false;
 		return true;
 	};
 
-	// unsigned loadStore(unsigned addr, int rw, int size, unsigned value=0);
-
 	unsigned fetch() {
-		unsigned offset = (pc - ROM_BASE)&PC_MASK;
-		return memory->read32(offset);
+		return memory->insnMem->fetch32(pc);
+	};
+
+	unsigned fetch(uint32_t addr) {
+		return memory->insnMem->fetch32(addr);
 	};
 
 	void csr_insn(int type, int csr, int rd, int rs, uint32_t imm32);
@@ -173,7 +159,6 @@ public:
 	void mret(void);
 	bool do_external_irq(void);
 	bool do_time_irq(void);
-
 
 	// newlib syscalls
 	void syscall(void);
@@ -186,7 +171,6 @@ public:
 	int sys_lseek(int file, int offset, int whence);
 	int sys_link(uint32_t a0, uint32_t a1);
 	int sys_unlink(uint32_t a0);
-
 
 #if RV64
 	void dumpReg32(void) {
@@ -216,7 +200,6 @@ public:
 		dumpReg32();
 	};
 
-
 	void log(Vliw* vlp) {
 		if(lfp) {
 			// fprintf(lfp, "%08x => %08x\n", (uint32_t)pc, (uint32_t)pc_next);
@@ -231,15 +214,24 @@ public:
 	};
 
 	void checkAddr(uint32_t addr32) {
-		if(!(addr32 >= 0x40000000 && addr32 < 0x40100000)
-			&& !(addr32 >= 0x00000000 && addr32 < 0x00100000)
+		uint32_t text_base = memory->insnMem->memBase;
+		uint32_t text_end  = text_base+memory->insnMem->memLen;
+
+		uint32_t data_base = memory->dataMem->memBase;
+		uint32_t data_end  = data_base+memory->dataMem->memLen;
+
+		if(!(addr32 >= data_base && addr32 < data_end)
+			&& !(addr32 >= text_base && addr32 < text_end)
 			&& !(addr32 >= 0xffffff00 && addr32 <= 0xfffffffc)) {
 			// && addr32 != 0xfffffffc) {
 			printf("checkAddr: Bad Address: %08x @ pc=%08x\n", addr32, (uint32_t)pc);
 			dump32();
+			dump_vliw();
 			exit(-1);
 		}
 	};
+
+	void dump_vliw(void);
 
 };
 

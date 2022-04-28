@@ -15,7 +15,6 @@
 // prototype
 int rand32(uint32_t* value);
 
-
 #if RV64
 #include "VliwTable_rv64.cpp"
 #endif
@@ -25,13 +24,11 @@ int rand32(uint32_t* value);
 
 FILE* tfp = NULL;
 
-
 #ifdef __linux__
 void Sleep(int ms = 1) {
 	;
 }
 #endif
-
 
 const char* getVliwName(int n) {
 	if(n < 0 || n >= VLIW_SIZE) {
@@ -64,7 +61,6 @@ bool Cpu::run(uint64_t n) {
 		if(n-- == 0) {
 			break;
 		}
-
 
 #ifndef VERY_FAST
 		// if((pc&0x00000003) != 0) {
@@ -100,7 +96,7 @@ bool Cpu::run(uint64_t n) {
 #ifdef NO_COMPRESSED
 		pc_inc = pc+4;	// full 32 bit
 		// lookup the instruction in the vliw cache, if ok ... use it
-		uint32_t vliw_index = (pc>>2);
+		uint32_t vliw_index = (pc>>2);	// A slot per 32 bit instruction
 
 		Vliw* vcp = &vliw_insn[vliw_index&vliw_mask];
 		if(vcp->opcode == VLIW_NONE) {
@@ -108,37 +104,31 @@ bool Cpu::run(uint64_t n) {
 			decode2vliw(pc, code, vcp);
 		}
 		vlp = vcp;
-#else	// !NO_COMPRESSED
-		unsigned code = fetch();		// do not advance the pc
-		if((code&0x00000003) == 0x00000003) {	// 32 bit instruction
-			pc_inc = pc+4;	// full 32 bit
-#if 1
-			decode2vliw(pc, code, vlp);
-#else
-			// ***** WARNING **** - this code is broken somehow???
-			// lookup the instruction in the vliw cache, if ok ... use it
-			// uint32_t vliw_index = (pc>>1);
-			uint32_t vliw_index = pc;
-
-			Vliw* vcp = &vliw_insn[vliw_index&vliw_mask];
-			if(vcp->opcode == VLIW_NONE) {
-				printf("Decode: %08x - %08x\n", pc, code);
-				decode2vliw(pc, code, vcp);
-			}
-			vlp = vcp;
-
-			if(DEBUG || cpu->verbose) {
-				printf("Insn32: addr=0x%08x, code=0x%08x\n", pc, (uint32_t)code);
-				printf("  vlp: %d, %d, %d, %d, %08x\n", vlp->opcode,
-					vlp->rd, vlp->rs1, vlp->rs2, vlp->imm);
-			}
-#endif
+#else	// COMPRESSED
+		uint32_t code32 = fetch();	// do not advance the pc
+		if((code32&0x00000003) == 0x00000003) {
+			// full 32 bit instruction
+			pc_inc = pc+4;
 		}
-		else  {
-			pc_inc = pc+2;	// 16 bit
-			code &= 0x0000ffff;
-			decodeCompressed(pc, code, vlp);
+		else {
+			// decompressed 16 bit instruction, convert to 32 bit instruction
+			uint16_t code16 = code32&0xffff;
+			code32 = decomp16_table[code16];
+			if(code32 == 0) {
+				printf("Unable to decompress %04x\n", code16);
+				exit(1);
+			}
+			pc_inc = pc+2;
 		}
+
+		// lookup the instruction in the vliw cache, if ok ... use it
+		uint32_t vliw_index = (pc>>1);	// A slot per 16 bit instruction
+
+		Vliw* vcp = &vliw_insn[vliw_index&vliw_mask];
+		if(vcp->opcode == VLIW_NONE) {
+			decode2vliw(pc, code32, vcp);
+		}
+		vlp = vcp;
 #endif	// NO_COMPRESSED
 
 		pc_next = pc_inc;
@@ -151,8 +141,6 @@ bool Cpu::run(uint64_t n) {
 			cpu->log(vlp);
 		}
 #endif
-
-
 
 		// check for interrupts
 		//	do this every 16 cycles just to reduce
@@ -201,7 +189,6 @@ bool Cpu::run(uint64_t n) {
 	return true;
 };
 
-
 void Cpu::sigTick(void) {
 	static FILE* sigFp = NULL;
 	static data_t sav[32];
@@ -239,8 +226,6 @@ void Cpu::sigTick(void) {
 	}
 };
 
-
-
 bool Cpu::execute(register Vliw* vlp) {
 	// uint64_t addr64;
 	uint32_t addr32;
@@ -255,10 +240,7 @@ bool Cpu::execute(register Vliw* vlp) {
 		fatal("Illegal instruction @ 0x%08x\n", (uint32_t)pc);
 		break;
 
-
-	//-----------------------------------------------------------------
 	//		Jump
-	//-----------------------------------------------------------------
 	case VLIW_J:
 		pc_next = pc + vlp->imm;
 		break;
@@ -278,10 +260,7 @@ bool Cpu::execute(register Vliw* vlp) {
 		reg[vlp->rd] = temp32;
 		break;
 
-
-	//-----------------------------------------------------------------
 	//		Branch
-	//-----------------------------------------------------------------
 	case VLIW_BEQ:
 		if(reg[vlp->rs1] == reg[vlp->rs2]) {
 			pc_next = pc + vlp->imm;
@@ -345,9 +324,7 @@ bool Cpu::execute(register Vliw* vlp) {
 		break;
 #endif
 
-	//-----------------------------------------------------------------
 	//		ALU
-	//-----------------------------------------------------------------
 	case VLIW_ADD:
 		reg[vlp->rd] = reg[vlp->rs1] + reg[vlp->rs2];
 		break;
@@ -368,16 +345,6 @@ bool Cpu::execute(register Vliw* vlp) {
 		reg[vlp->rd] = reg[vlp->rs1] & reg[vlp->rs2];
 		break;
 
-#if 0
-	case VLIW_MUL:
-		reg[vlp->rd] = reg[vlp->rs1] * reg[vlp->rs2];
-		break;
-
-	case VLIW_DIV:
-		reg[vlp->rd] = reg[vlp->rs1] / reg[vlp->rs2];
-		break;
-#endif
-
 	case VLIW_ADDI:
 		reg[vlp->rd] = reg[vlp->rs1] + vlp->imm;
 		break;
@@ -394,10 +361,7 @@ bool Cpu::execute(register Vliw* vlp) {
 		reg[vlp->rd] = reg[vlp->rs1] & vlp->imm;
 		break;
 
-
-	//-----------------------------------------------------------------
 	//		Set on conditional
-	//-----------------------------------------------------------------
 
 	// SLTI - write 1 to rd if rs1 < imm, 0 otherwise; signed compare
 	case VLIW_SLTI:
@@ -421,10 +385,7 @@ bool Cpu::execute(register Vliw* vlp) {
 		break;
 #endif
 
-
-	//-----------------------------------------------------------------
 	//		Shifts
-	//-----------------------------------------------------------------
 	case VLIW_SRL:
 		reg[vlp->rd] = (uint32_t)reg[vlp->rs1] >> (reg[vlp->rs2]&0x1f);
 		break;
@@ -441,6 +402,7 @@ bool Cpu::execute(register Vliw* vlp) {
 	case VLIW_SLLI:
 		reg[vlp->rd] = (uint32_t)reg[vlp->rs1] << (vlp->imm&0x1f);
 		break;
+
 	case VLIW_SRLI:
 		reg[vlp->rd] = (uint32_t)reg[vlp->rs1] >> (vlp->imm&0x1f);
 		break;
@@ -450,9 +412,7 @@ bool Cpu::execute(register Vliw* vlp) {
 		break;
 #endif
 
-	//-----------------------------------------------------------------
 	//		LUI/AUIPC
-	//-----------------------------------------------------------------
 	case VLIW_LUI:
 		reg[vlp->rd] = (vlp->imm<<12);
 		break;
@@ -461,10 +421,7 @@ bool Cpu::execute(register Vliw* vlp) {
 		reg[vlp->rd] = pc + (vlp->imm<<12);
 		break;
 
-
-	//-----------------------------------------------------------------
 	//		Load
-	//-----------------------------------------------------------------
 	case VLIW_LW:
 		addr32 = reg[vlp->rs1] + vlp->imm;
 		checkAddr(addr32);
@@ -510,10 +467,7 @@ bool Cpu::execute(register Vliw* vlp) {
 		}
 		break;
 
-
-	//-----------------------------------------------------------------
 	//		Store
-	//-----------------------------------------------------------------
 	case VLIW_SW:
 		addr32 = reg[vlp->rs1] + vlp->imm;
 		memory->write32(addr32, (uint32_t)reg[vlp->rs2]);
@@ -538,11 +492,8 @@ bool Cpu::execute(register Vliw* vlp) {
 		}
 		break;
 
-
 #ifdef DO_MUL_DIV
-	//-----------------------------------------------------------------
 	//		MUL/DIV/REM
-	//-----------------------------------------------------------------
 	case VLIW_MUL:
 		reg[vlp->rd] = (uint32_t)reg[vlp->rs1] * (uint32_t)reg[vlp->rs2];
 		break;
@@ -597,9 +548,7 @@ bool Cpu::execute(register Vliw* vlp) {
 
 #endif		// DO_MUL_DIV
 
-	//-----------------------------------------------------------------
 	//		System
-	//-----------------------------------------------------------------
 	case VLIW_ECALL:
 		if(do_newlib) {
 			syscall();
@@ -625,11 +574,7 @@ bool Cpu::execute(register Vliw* vlp) {
 		// NOP for now
 		break;
 
-
-
-	//-----------------------------------------------------------------
 	//		Control Registers
-	//-----------------------------------------------------------------
 	case VLIW_CSRRW:
 		csr_insn(CSR_TYPE_W, vlp->imm&0xfff, vlp->rd, vlp->rs1, (uint32_t)reg[vlp->rs1]);
 		break;
@@ -648,7 +593,6 @@ bool Cpu::execute(register Vliw* vlp) {
 	case VLIW_CSRRCI:
 		csr_insn(CSR_TYPE_C, vlp->imm&0xfff, vlp->rd, vlp->rs1, vlp->rs1);
 		break;
-
 
 		//******************************************************
 		//		RV64
@@ -701,8 +645,6 @@ bool Cpu::execute(register Vliw* vlp) {
 	// R0 is always Zero
 	reg[0] = 0;		// just in case it was written, then stomped it!
 
-
-
 #ifdef DO_TRACE
 	// Limit Execution
 	static int cnt = 0;
@@ -720,7 +662,6 @@ bool Cpu::execute(register Vliw* vlp) {
 		const char* rs1 = getRegName(vlp->rs1 & 0x1f);
 		const char* rs2 = getRegName(vlp->rs2 & 0x1f);
 		uint32_t addr32 = (uint32_t)reg[vlp->rs1] + vlp->imm;
-
 
 		fprintf(tfp, "%08x: %s %s,%s,%s, %08x\n", (uint32_t)pc, VliwName[vlp->opcode],
 			rd, rs1, rs2, vlp->imm);
@@ -852,7 +793,6 @@ bool Cpu::execute(register Vliw* vlp) {
 			fprintf(tfp, "  %s <= 0x%08x\n", rd, (uint32_t)reg[vlp->rd]);
 			break;
 
-
 		default:
 			if(vlp->rd != 0) {
 				fprintf(tfp, "  %s = %08x\n", rd, (uint32_t)reg[vlp->rd]);
@@ -863,10 +803,8 @@ bool Cpu::execute(register Vliw* vlp) {
 	}
 #endif
 
-
 	return true;
 };
-
 
 int64_t time_us(void) {
 	//	struct timeval {
@@ -1069,16 +1007,7 @@ void Cpu::csr_insn(int type, int csr, int rd, int rs, uint32_t imm32) {
 		reg[rd] = value;
 	}
 
-#if 0
-	if(csr == RISCV_CSR_MSTATUS) {
-		printf("Control reg: 0x%03x, rd=%d, imm32=%08x\n", csr, rd, imm32);
-		printf("mstatus = %08x, new_val = %08x, csr_read = %d, csr_write = %d\n",
-			value, new_val, csr_read, csr_write);
-	}
-#endif
-
 };
-
 
 //=====================================================================
 //		Ecall/Ebreak/Mret Exception Processing
@@ -1097,7 +1026,6 @@ void Cpu::ecall(void) {
 		mstatus |= RISCV_MSTATUS_MPIE;	// set mpie
 	}
 };
-
 
 void Cpu::ebreak(void) {
 	// save the current PC, EPC is this instruction!!!
@@ -1163,12 +1091,6 @@ bool Cpu::do_time_irq(void) {
 	return true;
 };
 
-
-
-
-
-
-
 // sys_brk - sys_brk(prev, inc)
 //	Notes:
 //		- 8 byte alignment for malloc chunks
@@ -1180,7 +1102,7 @@ bool Cpu::do_time_irq(void) {
 uint32_t Cpu::sys_brk(uint32_t a0, uint32_t a1) {
 	// uint32_t page_size = 0x1000;	// 4K page size
 	uint32_t page_size = 0x10;		// 16 byte alignment
-	verbose = 0;
+	bool verbose = 0;
 
 	if(verbose) {
 		printf("  brk(%08x, %08x)\n", a0, a1);
@@ -1203,192 +1125,6 @@ uint32_t Cpu::sys_brk(uint32_t a0, uint32_t a1) {
 
 	return (uint32_t)prev_heap;	// return 0;
 }
-
-
-
-
-#if 0
-// loadStore() - load/store unit
-//	rw - 0 = read, 1 = write, -1 = fetch
-unsigned Cpu::loadStore(unsigned addr, int rw, int size, unsigned value) {
-	unsigned ret = 0xdeadbeef;
-
-	// debug Uart
-	if((addr&0xffffff00) == 0xfffffe00) {
-		if((addr&0xff)==0x00 && rw == 1) {
-			int c = value & 0xff;
-#if 0
-			if(verbose) {
-				if(isprint(c)) {
-					printf("Uart: %c\n", c);
-				}
-				else {
-					printf("Uart: %02x\n", c);
-				}
-			}
-			else {
-				printf("%c", c);
-			}
-#else
-			static char buf[256];
-			static int index = 0;
-
-			if(c != '\n') {
-				buf[index++] = c;
-			}
-			buf[index] = '\0';
-			if(c == '\n' || index >= 256-1) {
-				index = 0;
-				// Form1->RichEdit2->Lines->Add(buf);
-				printf("Uart: %s\n", buf);
-			}
-#endif
-
-		}
-		return 0x00000000;	// default return values to zero (ready to transmit)
-	}
-
-	// debug Timer
-	if((addr&0xffffff00) == 0xfffffc00) {
-		unsigned reg = (addr&0x3f)>>2;
-		if(reg == 0 && rw == 0) {
-			Sleep(500);		// *** fake a simple timer !!!!
-			return 0x80000000;
-		}
-
-		return 0x00000000;	// default return values to zero (ready to transmit)
-	}
-
-	// HpeMini Leds
-	if((addr&0xffffff00) == 0xfffffd00) {
-		unsigned reg = (addr&0x3f)>>2;
-		if(reg == 0 && rw == 0) {
-			return 0x8000000;
-		}
-
-		return 0x00000000;	// default return values to zero (ready to transmit)
-	}
-
-
-	if(!quiet && /*verbose && */ rw == 1) {
-		if(size == 4) {
-			printf("Store: %08x <= %08x\n", addr, value);
-		}
-		else if(size == 2) {
-			printf("Store: %08x <= %04x\n", addr, value&0xffff);
-		}
-		else if(size == 1) {
-			char c = value;
-			printf("Store: %08x <= %02x (%c)\n", addr, c, (isprint(c)?c:'?'));
-		}
-		else {
-			printf("Store: Bad size = %d\n", size);
-		}
-	}
-	if(lfp && rw == 1) {
-		if(size == 4) {
-			fprintf(lfp, "Store: %08x <= %08x\n", addr, value);
-		}
-		else if(size == 2) {
-			fprintf(lfp, "Store: %08x <= %04x\n", addr, value&0xffff);
-		}
-		else if(size == 1) {
-			char c = value;
-			fprintf(lfp, "Store: %08x <= %02x (%c)\n", addr, c, (isprint(c)?c:'?'));
-		}
-		else {
-			fprintf(lfp, "Store: Bad size = %d\n", size);
-		}
-	}
-
-	if(addr == 0x0000ffff && rw == 1) {	// pseudo uart
-		char c = value;
-		printf("Uart: %02x (%c)\n", c, (isprint(c)?c:'?'));
-		// uartSend(c);
-	}
-
-	unsigned char* mem;
-	unsigned offset;
-	if(addr >= insnMem->memBase &&  addr < (insnMem->memBase+insnMem->memLen)) {
-		mem = insnMem->data;
-		offset = addr - insnMem->memBase;
-	}
-	else if(addr >= dataMem->memBase && addr < (dataMem->memBase+dataMem->memLen)) {
-		mem = dataMem->data;
-		offset = addr - dataMem->memBase;
-	}
-	else {
-		printf("Invalid address; %08x\n", addr);
-		if(lfp) {
-			fprintf(lfp, "Invalid address; %08x\n", addr);
-		}
-		return 0x00000000;
-	}
-
-	{
-		// memory access
-		if(rw <= 0) {	// read or fetch
-			if(size == 4) {
-				if(endian == 0) {	// big endian
-					ret = ((mem[offset]<<24) | (mem[offset+1]<<16) | (mem[offset+2]<<8) | mem[offset+3]);
-				}
-				else {	// little endian
-					ret = ((mem[offset+3]<<24) | (mem[offset+2]<<16) | (mem[offset+1]<<8) | mem[offset+0]);
-				}
-			}
-			else if(size == 2) {
-				if(endian == 0) {	// big endian
-					ret = ((mem[offset+0]<8) | mem[offset+1]);
-				}
-				else {	// little endian
-					ret = ((mem[offset+1]<8) | mem[offset+0]);
-				}
-			}
-			else if(size == 1) {
-				ret = mem[offset];
-			}
-		}
-		else {	// write
-			if(size == 4) {
-				if(endian == 0) {	// big endian
-					mem[offset+0] = value>>24;
-					mem[offset+1] = value>>16;
-					mem[offset+2] = value>>8;
-					mem[offset+3] = value;
-				}
-				else {	// little endian
-					mem[offset+3] = value>>24;
-					mem[offset+2] = value>>16;
-					mem[offset+1] = value>>8;
-					mem[offset+0] = value;
-				}
-			}
-			if(size == 2) {
-				if(endian == 0) {	// big endian
-					mem[offset+0] = value>>8;
-					mem[offset+1] = value;
-				}
-				else {	// little endian
-					mem[offset+1] = value>>8;
-					mem[offset+0] = value;
-				}
-			}
-			if(size == 1) {
-				mem[offset] = value;
-			}
-		}
-	}
-
-	if(!quiet && /* verbose && */ rw == 0) {
-		printf("Load: %08x => %08x\n", offset, ret);
-	}
-	if(lfp && rw == 0) {
-		fprintf(lfp, "Load: %08x => %08x\n", offset, ret);
-	}
-	return ret;
-};
-#endif
-
 
 #ifdef __x86_64__	// X86_RAND
 // x86 access
@@ -1415,7 +1151,6 @@ int cpuid(void) {
 	vendor[12] = '\0';
 	printf("CPU: %s\n", vendor);
 
-
 	// Info/Feature Bits
 	__cpuid(1, eax, ebx, ecx, edx);
 	printf("Info/Feature Bits:\n");
@@ -1423,7 +1158,6 @@ int cpuid(void) {
 	printf("  ebx: %08x\n", ebx);
 	printf("  ecx: %08x\n", ecx);
 	printf("  edx: %08x\n", edx);
-
 
 	if(ecx&RDRAND_AES) {
 		printf("Has AES!\n");
@@ -1441,7 +1175,6 @@ int cpuid(void) {
 		cpu_has_rand = true;
 	}
 
-
 	// Processor Serial Number
 	if(edx&X86_PSN) {
 		__cpuid(3, eax, ebx, ecx, edx);
@@ -1451,17 +1184,6 @@ int cpuid(void) {
 		printf("  ecx: %08x\n", ecx);
 		printf("  edx: %08x\n", edx);
 	}
-
-#if 0
-	uint32_t ret = __get_cpuid_max();
-	printf("get_cpuid_max: %08x\n", ret);
-	__cpuid(16, eax, ebx, ecx, edx);
-	printf("CPU Frequency:\n");
-	printf("  eax: %08x\n", eax);
-	printf("  ebx: %08x\n", ebx);
-	printf("  ecx: %08x\n", ecx);
-	printf("  edx: %08x\n", edx);
-#endif
 
 	return 1;
 }
@@ -1507,4 +1229,29 @@ int rand32(uint32_t* value) {
 }
 #endif		// X86_RAND
 
+//=============================================================================
+//		Cpu::dump_vliw()
+//=============================================================================
+// extern Vliw vliw_insn[0x200000];
+void Cpu::dump_vliw(void) {
+	int len = sizeof(vliw_insn)/sizeof(Vliw);
+
+	FILE* ofp = fopen("vliw_dump.txt", "w");
+	if(ofp == NULL) {
+		return;
+	}
+
+	for(int i=0; i<len; ++i) {
+		Vliw* vp = &vliw_insn[i];
+		if(vp->opcode != VLIW_NONE) {
+			int addr = i<<1;
+			fprintf(ofp, "%08x: op=%-10.10s (%02x), rd=%s, rs1=%s, rs2=%s, imm=%08x\n", addr,
+				getVliwName(vp->opcode), vp->opcode, getRegName(vp->rd),
+				getRegName(vp->rs1), getRegName(vp->rs2), vp->imm);
+		}
+
+	}
+	fclose(ofp);
+
+}
 

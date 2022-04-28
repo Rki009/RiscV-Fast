@@ -28,7 +28,7 @@ CC = g++
 
 # SRC = LogIt.cpp Functions.cpp mystrftime.cpp Epoch.cpp Erlang.cpp
 # SRC = $(wildcard *.cpp)
-SRC = $(PROJ).cpp Elf64.cpp Cpu.cpp Decode.cpp Compressed.cpp Util.cpp Newlib.cpp rv_disasm.cpp rv_compile.cpp rv_csr.cpp
+SRC = $(PROJ).cpp Elf64.cpp Cpu.cpp Decode.cpp Compressed.cpp Util.cpp Newlib.cpp rv_disasm.cpp rv_compile.cpp rv_csr.cpp decomp16.cpp
 OBJ = $(SRC:%.cpp=%.o)
 HDR = $(wildcard *.h)
 
@@ -51,20 +51,21 @@ $(PROJ): $(OBJ) $(HDR) Makefile
 	$(CC) $(LDLAGS) $(OBJ) -o $@
 	
 demo: clean all
-	./$(PROJ) --newlib ./Demo32.elf
+	# ./$(PROJ) --newlib ./Demo32.elf
+	./$(PROJ) -q --newlib ./Demo32.elf
 
 	
 run: all
 ifeq ($(UNAME_P),x86_64)
 	cd ./sw/Test_001 && make all && cd ..
 endif
-	./$(PROJ) --newlib $(MEMORY) ./sw/Test_001/Test32.elf
+	./$(PROJ) -q --newlib $(MEMORY) ./sw/Test_001/Test32.elf
 
 run_c: all
 ifeq ($(UNAME_P),x86_64)
 	cd ./sw/Test_001 && make all && cd ..
 endif
-	./$(PROJ) --newlib $(MEMORY) ./sw/Test_001/Test32c.elf
+	./$(PROJ) -q --newlib $(MEMORY) ./sw/Test_001/Test32c.elf
 
 run_sw++: all
 ifeq ($(UNAME_P),x86_64)
@@ -79,7 +80,8 @@ endif
 #		p name	- print variable
 #		q		- quit	
 gdb: all
-	gdb -ex=run --arg ./$(PROJ) --core -l ./sw/sw++/bin/progmem.elf
+	# gdb -ex=run --arg ./$(PROJ) --core -l ./sw/sw++/bin/progmem.elf
+	gdb -ex=run --arg ./$(PROJ) -q --newlib $(MEMORY) ./sw/Test_001/Test32.elf
 
 # run benchmarks
 bench: all

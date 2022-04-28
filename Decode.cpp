@@ -15,7 +15,6 @@
 #include "OpTable_rv32.cpp"
 #endif
 
-
 const char* regNameTable[32] {
 	// "zero", "ra", "sp", "gp",
 	"x0", "ra", "sp", "gp",
@@ -35,7 +34,6 @@ const char* getRegName(int n) {
 	}
 	return regNameTable[n];
 };
-
 
 bool streq(const char* s, const char* t) {
 	return (strcmp(s, t) == 0);
@@ -95,7 +93,6 @@ uint32_t doImm(uint32_t code, const char* str) {
 	return imm;
 }
 
-
 // J-type Immediate "20|[10:1]|11|[19:12]"
 uint32_t doJoff(uint32_t code) {
 	uint32_t field = (code>>12) &0x000fffff;
@@ -143,6 +140,38 @@ uint32_t doS2imm12(uint32_t code) {
 	return imm12;
 }
 
+typedef struct hash_element {
+	uint32_t	code32;
+	Vliw		vliw;
+} hash_element_t;
+
+hash_element_t vliw_hash_table[0x10000];
+
+void hash_dump(void) {
+	int len = sizeof(vliw_hash_table)/sizeof(hash_element_t);
+	for(int i=0; i<len; ++i) {
+		hash_element_t* hp = &vliw_hash_table[i];
+		if(hp->code32 != 0) {
+			printf("%08x: %d\n", hp->code32, hp->vliw.opcode);
+		}
+	}
+};
+
+inline uint16_t hash_it(uint32_t code32) {
+	uint16_t hash = code32 + (code32>>16);
+	return hash;
+}
+
+Vliw* hash_lookup(uint32_t code32) {
+	uint16_t hash = hash_it(code32);
+	hash_element_t* hp = &vliw_hash_table[hash];
+	if(hp->code32 != code32) {
+		return NULL;
+	}
+	// printf("hash: %08x - %03d\n", code32, hp->vliw.opcode);
+	return &(hp->vliw);
+}
+
 bool decode2vliw(uint32_t addr, uint32_t code, Vliw* vlp) {
 	if(cpu->verbose) {
 		printf("decode: 0x%08x - 0x%08x\n", addr, code);
@@ -150,6 +179,13 @@ bool decode2vliw(uint32_t addr, uint32_t code, Vliw* vlp) {
 
 	if((code&0x00000003) != 0x00000003) {
 		return decodeCompressed(addr, code, vlp);
+	}
+
+	// look up in hash table
+	Vliw* hvp = hash_lookup(code);
+	if(hvp != NULL) {
+		*vlp = *hvp;
+		return true;
 	}
 
 	// init the Vliw to zero
@@ -331,9 +367,14 @@ bool decode2vliw(uint32_t addr, uint32_t code, Vliw* vlp) {
 	if(cpu->verbose) {
 		printf("  %08x => %s\n", addr, out);
 	}
+
+	uint16_t hash = hash_it(code);
+	hash_element_t* hp = &vliw_hash_table[hash];
+	hp->code32 = code;
+	hp->vliw = *vlp;
+	// printf("hadd: %08x - %03d\n", code, hp->vliw.opcode);
 	return true;
 }
-
 
 void execute(uint32_t addr, uint32_t code) {
 	Vliw* vlp= new Vliw;
@@ -343,8 +384,6 @@ void execute(uint32_t addr, uint32_t code) {
 	cpu->pc = addr;
 	cpu->execute(vlp);
 }
-
-
 
 /* testing
 

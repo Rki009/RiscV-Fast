@@ -561,9 +561,10 @@ int readElf(const char* inputFilename, Memory* memory, Cpu* cpu,
 			continue;
 		}
 
-		if(1 || !quiet)
+		if(!quiet) {
 			printf("[%02d] %-12.12s 0x%08x 0x%08x  [%s, %s]\n", i, name,
 				addr, len, sectHdr2str(type), flags2str(flags));
+		}
 
 		if(strncmp(name, ".text", 5)==0 && (flags & (SHF_ALLOC|SHF_EXECINSTR))) {
 			// printf("  -> .Text\n");
@@ -664,52 +665,55 @@ int readElf(const char* inputFilename, Memory* memory, Cpu* cpu,
 	uint32_t text_len = text_end - text_base;
 	uint32_t data_len = data_end - data_base;
 	uint32_t bss_len = bss_end - bss_base;
-	printf("text_base = 0x%08x, text_end = 0x%08x, text_len = 0x%08x\n",
-		text_base, text_end, text_len);
-	printf("data_base = 0x%08x, data_end = 0x%08x, data_len = 0x%08x\n",
-		data_base, data_end, data_len);
-	printf("bss_base  = 0x%08x, bss_end  = 0x%08x, bss_len  = 0x%08x\n",
-		bss_base, bss_end, bss_len);
+	if(!quiet) {
+		printf("text_base = 0x%08x, text_end = 0x%08x, text_len = 0x%08x\n",
+			text_base, text_end, text_len);
+		printf("data_base = 0x%08x, data_end = 0x%08x, data_len = 0x%08x\n",
+			data_base, data_end, data_len);
+		printf("bss_base  = 0x%08x, bss_end  = 0x%08x, bss_len  = 0x%08x\n",
+			bss_base, bss_end, bss_len);
+	}
 
 	uint32_t heap_base = (bss_end + 15) & ~0xf;	// align to 16 bytes
 	uint32_t heap_end = heap_base + heap_len;
-	printf("heap_base = 0x%08x, heap_end  = 0x%08x, heap_len  = 0x%08x\n",
-		heap_base, heap_end, heap_len);
-
 	uint32_t total_len = heap_end - data_base;
-	printf("total_len = 0x%08x\n", total_len);
+	if(verbose) {
+		printf("heap_base = 0x%08x, heap_end  = 0x%08x, heap_len  = 0x%08x\n",
+			heap_base, heap_end, heap_len);
+		printf("total_len = 0x%08x\n", total_len);
+	}
 
 	// Check sections are within a 4K page
-	if((data_base-text_end) > page_size) {
-		printf("  Separate: .text and .data (0x%08x)\n", (data_base-text_base));
-	}
-	else {
-		printf("  Unified: .text and .data\n");
-		// do_unified = true;
-	}
-
-	uint32_t text_off = text_base & (page_size-1);
-	if(text_off != 0) {
-		printf("  text_off = 0x%08x\n", text_off);
+	if(!quiet) {
+		if((data_base-text_end) > page_size) {
+			printf("  Separate: .text (0x%08x) and .data (0x%08x)\n", text_base, data_base);
+		}
+		else {
+			printf("  Unified: .text and .data\n");
+			// do_unified = true;
+		}
 	}
 
 	// unified is .text == .data
 
 	// setup new memory ...
-		code->memBase = text_base;
-		code->memLen = text_len;
-		code->data = (uint8_t*)malloc(text_len);
+	code->memBase = text_base;
+	code->memLen = text_len;
+	code->data = (uint8_t*)malloc(text_len);
+	data->memBase = data_base;
+	data->memLen = total_len;
+	data->data = (uint8_t*)malloc(total_len);
+	if(!quiet) {
 		code->info();
-
-		data->memBase = data_base;
-		data->memLen = total_len;
-		data->data = (uint8_t*)malloc(total_len);
 		data->info();
+	}
 
-	printf("===========================\n");
-	code->info();
-	data->info();
-	printf("===========================\n");
+	if(0) {
+		printf("===========================\n");
+		code->info();
+		data->info();
+		printf("===========================\n");
+	}
 
 	// Load the memory sections
 	// #define SHF_WRITE	     (1 << 0)
@@ -747,12 +751,14 @@ int readElf(const char* inputFilename, Memory* memory, Cpu* cpu,
 
 		// .text - Instructions and Read Only data
 		if(textOk && (alloc /* && !rw*/)) {
-			if(!quiet) {
+			if(verbose) {
 				printf(".text => %-12.12s 0x%08x 0x%08x  [%02x, %02x]\n", name, addr, len, type, flags);
 			}
 			memcpy(code->data+(addr-code->memBase), offset, len);
-			printf("  memcpy - .text: 0x%08x, 0x%08x [0x%08x, 0x%08lx]\n", addr, len,
-				(addr-code->memBase), offset-elfbuf);
+			if(verbose) {
+				printf("  memcpy - .text: 0x%08x, 0x%08x [0x%08x, 0x%08lx]\n", addr, len,
+					(addr-code->memBase), offset-elfbuf);
+			}
 
 			Elf32_Info* ip = new Elf32_Info;
 			ip->name = strdup(name);	// name of the section
@@ -773,11 +779,13 @@ int readElf(const char* inputFilename, Memory* memory, Cpu* cpu,
 		}
 		// .data - Data Section
 		else if(dataOk && (alloc && rw) && !nobits) {
-			if(!quiet) {
+			if(verbose) {
 				printf(".data => %-12.12s 0x%08x 0x%08x  [%02x, %02x]\n", name, addr, len, type, flags);
 			}
 			memcpy(data->data+(addr-data->memBase), offset, len);
-			printf("  memcpy - .data: 0x%08x, 0x%08x\n", addr, len);
+			if(verbose) {
+				printf("  memcpy - .data: 0x%08x, 0x%08x\n", addr, len);
+			}
 
 			Elf32_Info* ip = new Elf32_Info;
 			ip->name = strdup(name);	// name of the section
@@ -798,11 +806,13 @@ int readElf(const char* inputFilename, Memory* memory, Cpu* cpu,
 		// .bss - bss Section
 		// else if(dataOk && (alloc && rw) && nobits) {
 		else if(bssOk && (alloc && rw) && nobits) {
-			if(!quiet) {
+			if(verbose) {
 				printf(".bss  => %-12.12s 0x%08x 0x%08x  [%02x, %02x]\n", name, addr, len, type, flags);
 			}
 			memset(data->data+(addr-data->memBase), 0, len);
-			printf("  memzero - .bss: 0x%08x, 0x%08x\n", addr, len);
+			if(verbose) {
+				printf("  memzero - .bss: 0x%08x, 0x%08x\n", addr, len);
+			}
 
 			Elf32_Info* ip = new Elf32_Info;
 			ip->name = strdup(name);	// name of the section

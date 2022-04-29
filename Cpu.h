@@ -141,7 +141,9 @@ public:
 	};
 
 	bool checkPc(unsigned target) {
-		if ((pc-memory->insnMem->memBase) >= memory->insnMem->memLen) return false;
+		if((pc-memory->insnMem->memBase) >= memory->insnMem->memLen) {
+			return false;
+		}
 		return true;
 	};
 

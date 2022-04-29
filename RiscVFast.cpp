@@ -23,7 +23,7 @@
 #include "Elf64.h"
 
 int Version = 1;
-int Release = 0;
+int Release = 1;
 
 // options
 bool doSignature = false;
@@ -509,8 +509,8 @@ int main(int argc, char** argv) {
 	if(!quiet) {
 		printf("MySim - RV32/Rv64\n");
 		printf("  (C) Ron K. Irvine, 2022.\n");
-		// printf("  Build: %s %s\n", __DATE__, __TIME__);
 		printf("  Build: V%d.%02d, %s\n", Version, Release, buildDate());
+		// printf("  Date: %s %s\n", __DATE__, __TIME__);
 	}
 
 	if(textBase != NULL) {
@@ -618,22 +618,19 @@ int main(int argc, char** argv) {
 		rv_compile("rv_warp_out.cpp", 0x00000000, text_end);
 	}
 
-	if(!quiet) {
-		printf("Ready to run: %s @ %08x, data_end = %08x\n", elfFile, entry, data_end);
-	}
-
+	// initialize the RiscV CPU
 	cpu->reset();
-
 	cpu->start(entry);
-	printf("Entry @ 0x%08x: 0x%08x\n", entry, cpu->fetch(entry));
-
 	cpu->edata(data_end);
 	// cpu->edata(memory->dataMem->memBase + memory->dataMem->memLen);
 
 	// set the stack to the top of data memory
 	uint32_t sp_addr = memory->dataMem->memBase + memory->dataMem->memLen-16;
 	cpu->setStack(sp_addr);
+
 	if(!quiet) {
+		printf("Ready to run: %s @ %08x, data_end = %08x\n", elfFile, entry, data_end);
+		printf("Entry @ 0x%08x: 0x%08x\n", entry, cpu->fetch(entry));
 		printf("Stack Pointer: %08x\n", sp_addr);
 	}
 
@@ -647,8 +644,6 @@ int main(int argc, char** argv) {
 		verbose = 0;
 		cpu->verbose = false;
 	}
-
-	// cpu->verbose = true;
 
 	// run ...
 	if(debug_flag) {

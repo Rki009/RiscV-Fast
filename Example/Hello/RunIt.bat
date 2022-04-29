@@ -19,7 +19,7 @@ wsl /opt/riscv_11.1/bin/riscv64-unknown-elf-objdump -d -t -h Hello.elf | wsl exp
 :: wsl ../../RiscVFast --newlib -T%TEXT_BASE%:%TEXT_SIZE% -D%DATA_BASE%:%DATA_SIZE% Hello.elf
 
 :: Used default: -T0x00000000:0x00100000 -D0x40000000:0x00100000
-wsl ../../RiscVFast -q --newlib Hello.elf
+wsl ../../RiscVFast --newlib Hello.elf
 
 @pause
 @goto again
